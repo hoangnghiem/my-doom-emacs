@@ -65,6 +65,8 @@
 #+begin_src emacs-lisp
 (setq read-process-output-max (* 5 1024 1024) ;; 5mb
       which-key-idle-delay 0.5
+      kill-whole-line t
+      make-backup-files t
       ;; treemacs default width
       treemacs-width 60
       org-latex-tables-booktabs t
@@ -83,6 +85,11 @@
 (setq yas-snippet-dirs
       (append yas-snippet-dirs
               (list (expand-file-name "snippets" doom-private-dir))))
+
+(add-hook! 'solaire-mode-hook
+  ;(set-face-attribute 'solaire-fringe-face nil :background (face-background 'solaire-hl-line-face))
+  (set-face-attribute 'fringe nil :background (face-background 'solaire-default-face))
+  )
 #+end_src
 
 *** Custom faces
@@ -115,6 +122,11 @@ Allow C-h and C-l to switch buffers
      "C-h" #'evil-window-left
      "C-l" #'evil-window-right
      "gb" #'treemacs-bookmark)))
+
+(after! treemacs
+  (add-hook! 'treemacs-mode-hook (setq window-divider-mode -1
+                                       variable-pitch-mode 1
+                                       treemacs-follow-mode 1)))
 #+end_src
 
 * Utility functions
@@ -370,96 +382,84 @@ Allow C-h and C-l to switch buffers
    ;; for java
    ((eq major-mode 'java-mode)
     (string-inflection-java-style-cycle))
+   ;; for ruby
+   ((eq major-mode 'ruby-mode)
+    (string-inflection-ruby-style-cycle))
    (t
     ;; default
-    (string-inflection-ruby-style-cycle))))
+    (string-inflection-all-cycle))))
 
-(defhydra hydra-string-inflection ()
-  "string inflection"
-  ("i" my-string-inflection-cycle-auto "cycle")
-  ("l" string-inflection-lower-camelcase "lower camel")
-  ("c" string-inflection-camelcase "camel")
-  ("k" string-inflection-kebab-case "kebab")
-  ("u" string-inflection-underscore "underscore")
-  ("U" string-inflection-upcase "upcase")
-  ("q" nil "quit"))
+(pretty-hydra-define hydra-string-inflection (:color red)
+  ("String inflection"
+  (("i" my-string-inflection-cycle-auto "cycle")
+   ("l" string-inflection-lower-camelcase "lower camel")
+   ("c" string-inflection-camelcase "camel")
+   ("k" string-inflection-kebab-case "kebab")
+   ("u" string-inflection-underscore "underscore")
+   ("U" string-inflection-upcase "upcase"))))
 #+end_src
 
 ** expand region
 #+begin_src emacs-lisp
-(defhydra hydra-expand (:hint nil :columns 1 :body-pre (er/expand-region 1))
-  ("c" er/contract-region "Contract")
-  ("e" er/expand-region "Expand"))
+(pretty-hydra-define hydra-expand
+  (:color red :body-pre (er/expand-region 1))
+  ("Expand region"
+   (("c" er/contract-region "Contract")
+    ("e" er/expand-region "Expand")))
+  )
 #+end_src
 
 ** scrolling
 #+begin_src emacs-lisp
-(defhydra hydra-scroll ()
-  "line scrolling"
-  ("k" #'evil-scroll-line-up)
-  ("j" #'evil-scroll-line-down)
-  ("t" #'evil-scroll-line-to-top)
-  ("b" #'evil-scroll-line-to-bottom)
-  ("c" #'evil-scroll-line-to-center)
-  ("q" nil "quit"))
+(pretty-hydra-define hydra-scroll (:color red)
+  ("Scrolling"
+   (("k" evil-scroll-line-up "scroll up")
+    ("j" evil-scroll-line-down "scroll down")
+    ("t" evil-scroll-line-to-top "to top")
+    ("b" evil-scroll-line-to-bottom "to bottom")
+    ("c" evil-scroll-line-to-center "to center"))))
+
 #+end_src
 
 ** line moving
 #+begin_src emacs-lisp
-(defhydra hydra-move-line (:color red :hint nil)
-  "
- Move Line^^
-------------------
- [_k_] up
- [_j_] down
- [_q_] Quit"
-
-  ("k" move-text-line-up)
-  ("j" move-text-line-down)
-  ("q" nil))
+(pretty-hydra-define hydra-move-line (:color red :hint nil)
+  ("Move Line"
+   (("k" move-text-line-up "up")
+    ("j" move-text-line-down "down"))))
 #+end_src
 
 ** centaur tab
 #+begin_src emacs-lisp
-(defhydra hydra-centaur (:color red
-                         :hint nil)
-  "
-_l_: next
-_h_: previous
-_d_: kill this buffer
-_k_: kill other buffers
-_q_: quit
-  "
-  ("l" centaur-tabs-forward)
-  ("h" centaur-tabs-backward)
-  ("d" kill-this-buffer)
-  ("k" doom/kill-other-buffers)
-  ("q" nil :color blue))
+(pretty-hydra-define hydra-centaur (:color red :hint nil)
+  ("Buffer"
+   (("l" centaur-tabs-forward "next")
+    ("h" centaur-tabs-backward "previous")
+    ("d" kill-this-buffer "kill")
+    ("k" doom/kill-other-buffers "kill other buffers"))))
 #+end_src
 
 ** multiple cursor
 #+begin_src emacs-lisp
-(defhydra hydra-multiple-cursors (:color pink :hint nil)
-  "
-^Match^            ^Line-wise^           ^Manual^
-^^^^^^----------------------------------------------------
-_Z_: match all     _J_: make & go down   _z_: toggle here
-_m_: make & next   _K_: make & go up
-_M_: make & prev   ^ ^
-_n_: skip & next   ^ ^                   _p_: pause/resume
-_N_: skip & prev
-"
-  ("Z" #'evil-mc-make-all-cursors)
-  ("m" #'evil-mc-make-and-goto-next-match)
-  ("M" #'evil-mc-make-and-goto-prev-match)
-  ("n" #'evil-mc-skip-and-goto-next-match)
-  ("N" #'evil-mc-skip-and-goto-prev-match)
-  ("J" #'evil-mc-make-cursor-move-next-line)
-  ("K" #'evil-mc-make-cursor-move-prev-line)
-  ("z" #'+multiple-cursors/evil-mc-toggle-cursor-here)
-  ("p" #'+multiple-cursors/evil-mc-toggle-cursors)
-  ("q" nil "quit")
-  ("<escape>" #'evil-mc-resume-cursors "quit" :color blue))
+(pretty-hydra-define hydra-multiple-cursors (:color pink :hint nil :title "MULTIPLE CURSOR")
+  ("Match"
+   (("Z" #'evil-mc-make-all-cursors "match all")
+    ("m" #'evil-mc-make-and-goto-next-match "make & next")
+    ("M" #'evil-mc-make-and-goto-prev-match "make & prev")
+    ("n" #'evil-mc-skip-and-goto-next-match "skip & next")
+    ("N" #'evil-mc-skip-and-goto-prev-match "skip & prev"))
+
+   "Line-wise"
+   (("J" #'evil-mc-make-cursor-move-next-line "make & go down")
+    ("K" #'evil-mc-make-cursor-move-prev-line "make & go up"))
+
+   "Manual"
+   (("z" #'+multiple-cursors/evil-mc-toggle-cursor-here "toggle here")
+    ("p" #'+multiple-cursors/evil-mc-toggle-cursors "pause/resume"))
+
+   ""
+   (("q" nil "quit")
+    ("<escape>" #'evil-mc-resume-cursors "quit" :color blue))))
 #+end_src
 
 * Languages
@@ -490,6 +490,19 @@ _N_: skip & prev
 ** org-mode
 #+begin_src emacs-lisp
 (after! ox-html (require 'ox-tailwind))
+
+(defun my/enable-aggressive-indent ()
+  (aggressive-indent-mode 1))
+
+(add-hook 'org-src-mode-hook #'my/enable-aggressive-indent)
+
+(use-package! org-appear
+  :after org
+  :hook (org-mode . org-appear-mode)
+  :config (setq
+           org-appear-autolinks t
+           org-appear-autoentities t
+           org-appear-autosubmarkers t ))
 #+end_src
 
 ** ruby-mode
@@ -520,7 +533,13 @@ _N_: skip & prev
 
 ** web-mode
 #+begin_src emacs-lisp
- (add-to-list 'auto-mode-alist '("\\.mjml\\'" . web-mode))
+
+(add-to-list 'auto-mode-alist '("\\.mjml\\'" . web-mode))
+
+(after! web-mode
+  (add-to-list 'web-mode-engines-alist '("erb" . "\\.erb\\'"))
+  (add-to-list 'web-mode-engines-alist '("erb" . "\\.mjml\\'"))
+  )
 #+end_src
 
 * Key bindings
@@ -550,8 +569,8 @@ _N_: skip & prev
 
 ;; visual mode
 (map! :v "C-c i" 'edit-indirect-region)
-(map! :v "C-e" 'expreg-expand)
-(map! :v "C-S-e" 'expreg-contract)
+(map! :nv "C-e" 'expreg-expand)
+(map! :nv "C-S-e" 'expreg-contract)
 ;; any mode
 
 #+end_src

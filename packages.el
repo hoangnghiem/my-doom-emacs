@@ -86,6 +86,7 @@
 (package! move-text)
 (package! kaolin-themes)
 (package! nano-theme :recipe (:host github :repo "rougier/nano-theme"))
+(package! pretty-hydra)
 
 ;; (unpin! multiple-cursors)
 (unpin! lsp-mode)
