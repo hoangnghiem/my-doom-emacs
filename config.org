@@ -2,6 +2,41 @@
 #+AUTHOR: Hoang Nghiem
 #+EMAIL: hoangnghiem1711@gmail.com
 
+* Table of contents :TOC:
+- [[#general][General]]
+  - [[#personal-information][Personal information]]
+  - [[#appearance][Appearance]]
+  - [[#treemacs][Treemacs]]
+- [[#utility-functions][Utility functions]]
+  - [[#duplicate-line][Duplicate line]]
+  - [[#copy-filename-of-current-buffer][Copy filename of current buffer]]
+  - [[#check-rails-project][Check rails project]]
+- [[#packages][Packages]]
+  - [[#doom-built-in-packages][Doom built-in packages]]
+  - [[#extra-packages][Extra packages]]
+- [[#hydras][Hydras]]
+  - [[#string-inflection][string-inflection]]
+  - [[#expand-region][expand region]]
+  - [[#scrolling][scrolling]]
+  - [[#line-moving][line moving]]
+  - [[#centaur-tab][centaur tab]]
+  - [[#multiple-cursor][multiple cursor]]
+- [[#languages][Languages]]
+  - [[#emacs-lisp-mode][emacs-lisp-mode]]
+  - [[#lsp-mode][lsp-mode]]
+  - [[#org-mode][org-mode]]
+  - [[#ruby-mode][ruby-mode]]
+  - [[#makefile-mode][makefile-mode]]
+  - [[#web-mode][web-mode]]
+- [[#key-bindings][Key bindings]]
+  - [[#local-leader][Local leader]]
+  - [[#additional-leader-mappings][Additional leader mappings]]
+  - [[#general-actions][General actions]]
+  - [[#-leader-mappings][; leader mappings]]
+  - [[#g-leader-mappings][g leader mappings]]
+  - [[#c-i-leader-mappings][C-i leader mappings]]
+- [[#ruby-on-rails][Ruby on rails]]
+
 * General
 ** Personal information
 #+begin_src emacs-lisp
@@ -48,9 +83,6 @@
 (setq yas-snippet-dirs
       (append yas-snippet-dirs
               (list (expand-file-name "snippets" doom-private-dir))))
-
-
-(global-tree-sitter-mode)
 #+end_src
 
 *** Custom faces
@@ -135,6 +167,14 @@ Allow C-h and C-l to switch buffers
 (defun buffer/copy-file-name ()
   (interactive)
   (clipboard/set (file-name-base buffer-file-name)))
+#+end_src
+
+** Check rails project
+#+begin_src emacs-lisp
+(defun is-in-rails-project ()
+  "Check if the current buffer is part of a Rails project."
+  (and (buffer-file-name) ; Ensures it's a file buffer
+       (locate-dominating-file (buffer-file-name) "config/application.rb")))
 #+end_src
 
 * Packages
@@ -706,4 +746,5 @@ _N_: skip & prev
   (map! :leader "rq" #'projectile-rails-find-stimulus)
   (map! :leader "rf" #'projectile-rails-find-form)
   )
+
 #+end_src
