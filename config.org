@@ -53,6 +53,27 @@
 (global-tree-sitter-mode)
 #+end_src
 
+*** Custom faces
+#+begin_src emacs-lisp
+;; my custom color for web mode, works well with doom-one theme
+;; disable if using other theme
+(custom-set-faces!
+  '(web-mode-block-delimiter-face :mode 'web-mode :foreground "#64748b")
+  '(web-mode-html-tag-bracket-face :mode 'web-mode :foreground "#64748b")
+  '(web-mode-html-attr-equal-face :mode 'web-mode :foreground "#64748b")
+  '(web-mode-symbol-face :mode 'web-mode :foreground "#ECBE7B")
+  ;; '(web-mode-html-tag-face :mode 'web-mode :foreground "#da8548")
+  '(web-mode-html-tag-face :mode 'web-mode :foreground "#ff6c6b")
+  ;; '(web-mode-html-tag-face :mode 'web-mode :foreground "#F472B6")
+  '(web-mode-html-attr-name-face :mode 'web-mode :foreground "#bbc2cf")
+  ;; '(web-mode-html-attr-value-face :mode 'web-mode :foreground "#7DD3FC")
+  ;; '(web-mode-html-attr-value-face :mode 'web-mode :foreground "#46D9FF")
+  '(web-mode-html-attr-value-face :mode 'web-mode :foreground "#4db5bd")
+  '(hl-line :background "#1c1f24")
+  '(font-lock-comment-face :slant italic)
+  '(font-lock-keyword-face :slant italic))
+#+end_src
+
 ** Treemacs
 Allow C-h and C-l to switch buffers
 #+begin_src emacs-lisp
