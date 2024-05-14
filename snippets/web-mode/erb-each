@@ -1,0 +1,6 @@
+# key: ea
+# name: erb-each
+# --
+<% $1.each do |$2| -%>
+  $0
+<% end -%>

@@ -1,0 +1,688 @@
+#+TITLE: My doom emacs configuration
+#+AUTHOR: Hoang Nghiem
+#+EMAIL: hoangnghiem1711@gmail.com
+
+* General
+** Personal information
+#+begin_src emacs-lisp
+(setq user-full-name "Hoang Nghiem"
+      user-mail-address "hoangnghiem1711@gmail.com")
+#+end_src
+
+** Appearance
+*** Colorscheme & font
+#+begin_src emacs-lisp
+(setq doom-font (font-spec :family "CommitMono Nerd Font" :size 20 :weight 'regular)
+      doom-variable-pitch-font (font-spec :family "CommitMono Nerd Font" :size 20)
+      doom-theme 'doom-one
+      display-line-numbers-type t
+      doom-themes-treemacs-theme "doom-colors")
+
+(setq-default line-spacing 0.2)
+#+end_src
+
+*** Open emacs in fullscreen by default
+#+begin_src emacs-lisp
+(setq initial-frame-alist '((fullscreen . maximized)))
+#+end_src
+
+*** Misc
+#+begin_src emacs-lisp
+(setq read-process-output-max (* 5 1024 1024) ;; 5mb
+      which-key-idle-delay 0.5
+      ;; treemacs default width
+      treemacs-width 60
+      org-latex-tables-booktabs t
+      ;; org
+      org-latex-toc-command "\\tableofcontents \\clearpage"
+      expand-region-subword-enabled t
+      corfu-auto-prefix 1
+      apheleia-log-debug-info t
+      langtool-java-classpath "/usr/share/languagetool:/usr/share/java/languagetool/*"
+      fancy-splash-image (expand-file-name "Emacs.svg" doom-private-dir)
+      scroll-up-aggressively 0.01
+      scroll-down-aggressively 0.01
+      ispell-program-name "aspell"
+      ispell-dictionary "english")
+
+(setq yas-snippet-dirs
+      (append yas-snippet-dirs
+              (list (expand-file-name "snippets" doom-private-dir))))
+
+
+(global-tree-sitter-mode)
+#+end_src
+
+** Treemacs
+Allow C-h and C-l to switch buffers
+#+begin_src emacs-lisp
+(map!
+ (:after treemacs-evil
+   (:map evil-treemacs-state-map
+     "C-h" #'evil-window-left
+     "C-l" #'evil-window-right
+     "gb" #'treemacs-bookmark)))
+#+end_src
+
+* Utility functions
+** Duplicate line
+#+begin_src emacs-lisp
+(defun duplicate-line (arg)
+  "Duplicate current line, leaving point in lower line."
+  (interactive "*p")
+
+  ;; save the point for undo
+  (setq buffer-undo-list (cons (point) buffer-undo-list))
+
+  ;; local variables for start and end of line
+  (let ((bol (save-excursion (beginning-of-line) (point)))
+        eol)
+    (save-excursion
+
+      ;; don't use forward-line for this, because you would have
+      ;; to check whether you are at the end of the buffer
+      (end-of-line)
+      (setq eol (point))
+
+      ;; store the line and disable the recording of undo information
+      (let ((line (buffer-substring bol eol))
+            (buffer-undo-list t)
+            (count arg))
+        ;; insert the line arg times
+        (while (> count 0)
+          (newline)         ;; because there is no newline in 'line'
+          (insert line)
+          (setq count (1- count)))
+        )
+
+      ;; create the undo information
+      (setq buffer-undo-list (cons (cons eol (point)) buffer-undo-list)))
+    ) ; end-of-let
+
+  ;; put the point in the lowest line and return
+  (next-line arg))
+#+end_src
+
+** Copy filename of current buffer
+#+begin_src emacs-lisp
+(defun clipboard/set (astring)
+  "Copy a string to clipboard"
+  (with-temp-buffer
+    (insert astring)
+    (clipboard-kill-region (point-min) (point-max))))
+
+(defun buffer/copy-file-name ()
+  (interactive)
+  (clipboard/set (file-name-base buffer-file-name)))
+#+end_src
+
+* Packages
+** Doom built-in packages
+*** evil-snipe
+#+begin_src emacs-lisp
+(after! evil-snipe
+  :config
+  (setq evil-snipe-scope 'whole-buffer))
+#+end_src
+
+*** rotate-text
+#+begin_src emacs-lisp
+;; some rotation text for ruby
+(after! rotate-text
+  (add-to-list 'rotate-text-words '("valid" "invalid"))
+  (add-to-list 'rotate-text-words '("context" "describe"))
+  (add-to-list 'rotate-text-symbols '("be_valid" "be_invalid"))
+  (add-to-list 'rotate-text-symbols '("valid?" "invalid?"))
+  (add-to-list 'rotate-text-symbols '("present?" "blank?" "nil?"))
+  (add-to-list 'rotate-text-symbols '("belongs_to" "has_many" "has_one"))
+  (add-to-list 'rotate-text-symbols '("if" "unless"))
+  (add-to-list 'rotate-text-symbols '("greater_than" "greater_than_or_equal_to" "equal_to" "less_than" "less_than_or_equal_to" "other_than" "odd" "even"))
+  (add-to-list 'rotate-text-symbols '("to" "not_to")))
+#+end_src
+
+*** flycheck
+#+begin_src emacs-lisp
+;; disable flycheck on-save to avoid a race condition between flycheck saving a tmp-file and apheleia formatting it
+(after! flycheck
+  (setq flycheck-check-syntax-automatically '(mode-enabled idle-buffer-switch)))
+#+end_src
+
+*** cape
+#+begin_src emacs-lisp
+(after! cape
+  (setq cape-dict-file "/usr/share/dict/words"))
+#+end_src
+
+*** highlight-indent-guides
+#+begin_src emacs-lisp
+(use-package! highlight-indent-guides
+  :config
+  (setq highlight-indent-guides-method 'column)
+  (setq highlight-indent-guides-responsive 'top)
+  (setq highlight-indent-guides-auto-character-face-perc 20)
+  (setq highlight-indent-guides-auto-even-face-perc 8)
+  (setq highlight-indent-guides-auto-character-face-perc 100))
+#+end_src
+
+*** evil
+#+begin_src emacs-lisp
+(after! evil
+  (defalias #'forward-evil-word #'forward-evil-symbol)
+  ;; make evil-search-word look for symbol rather than word boundaries
+  (setq-default evil-symbol-word-search t))
+#+end_src
+
+** Extra packages
+*** evil-matchit (like % in vim)
+#+begin_src emacs-lisp
+(use-package! evil-matchit
+  :config
+  (global-evil-matchit-mode 1)
+  (add-hook 'evilmi-jump-hook
+          (lambda (before-jump-p)
+            (global-tree-sitter-mode (not before-jump-p)))))
+#+end_src
+*** visual-regexp-steroids
+#+begin_src emacs-lisp
+(use-package! visual-regexp-steroids)
+#+end_src
+*** codeium (code AI completion)
+#+begin_src emacs-lisp
+(use-package codeium
+  ;; if you use straight
+  ;; :straight '(:type git :host github :repo "Exafunction/codeium.el")
+  ;; otherwise, make sure that the codeium.el file is on load-path
+
+  :init
+  ;; use globally
+  (add-to-list 'completion-at-point-functions #'codeium-completion-at-point)
+  ;; or on a hook
+  ;; (add-hook 'python-mode-hook
+  ;;     (lambda ()
+  ;;         (setq-local completion-at-point-functions '(codeium-completion-at-point))))
+
+  ;; if you want multiple completion backends, use cape (https://github.com/minad/cape):
+  ;; (add-hook 'prog-mode-hook
+  ;;           (lambda ()
+  ;;             (setq-local completion-at-point-functions
+  ;;                         (list (cape-super-capf #'codeium-completion-at-point #'lsp-completion-at-point)))))
+  ;; an async company-backend is coming soon!
+
+  ;; codeium-completion-at-point is autoloaded, but you can
+  ;; optionally set a timer, which might speed up things as the
+  ;; codeium local language server takes ~0.2s to start up
+  ;; (add-hook 'emacs-startup-hook
+  ;;  (lambda () (run-with-timer 0.1 nil #'codeium-init)))
+
+  ;; :defer t ;; lazy loading, if you want
+  :config
+  (setq use-dialog-box t) ;; do not use popup boxes
+
+  ;; if you don't want to use customize to save the api-key
+  ;; (setq codeium/metadata/api_key "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+
+  ;; get codeium status in the modeline
+  (setq codeium-mode-line-enable
+        (lambda (api) (not (memq api '(CancelRequest Heartbeat AcceptCompletion)))))
+  (add-to-list 'mode-line-format '(:eval (car-safe codeium-mode-line)) t)
+  ;; alternatively for a more extensive mode-line
+  ;; (add-to-list 'mode-line-format '(-50 "" codeium-mode-line) t)
+
+  ;; use M-x codeium-diagnose to see apis/fields that would be sent to the local language server
+  (setq codeium-api-enabled
+        (lambda (api)
+          (memq api '(GetCompletions Heartbeat CancelRequest GetAuthToken RegisterUser auth-redirect AcceptCompletion))))
+  ;; you can also set a config for a single buffer like this:
+  ;; (add-hook 'python-mode-hook
+  ;;     (lambda ()
+  ;;         (setq-local codeium/editor_options/tab_size 4)))
+
+  ;; You can overwrite all the codeium configs!
+  ;; for example, we recommend limiting the string sent to codeium for better performance
+  (defun my-codeium/document/text ()
+    (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point) 1000) (point-max))))
+  ;; if you change the text, you should also change the cursor_offset
+  ;; warning: this is measured by UTF-8 encoded bytes
+  (defun my-codeium/document/cursor_offset ()
+    (codeium-utf8-byte-length
+     (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (point))))
+  (setq codeium/document/text 'my-codeium/document/text)
+  (setq codeium/document/cursor_offset 'my-codeium/document/cursor_offset))
+#+end_src
+*** move-text
+#+begin_src emacs-lisp
+(use-package! move-text)
+#+end_src
+
+*** yafolding
+#+begin_src emacs-lisp
+
+(use-package! yafolding
+  :hook (web-mode . yafolding-mode))
+#+end_src
+*** auto-dim-other-buffers
+#+begin_src emacs-lisp
+(add-hook 'after-init-hook (lambda ()
+                             (when (fboundp 'auto-dim-other-buffers-mode)
+                               (auto-dim-other-buffers-mode t)
+                               )))
+#+end_src
+*** expreg (language specific expand region)
+#+begin_src emacs-lisp
+(use-package! expreg)
+#+end_src
+*** wakatime
+#+begin_src emacs-lisp
+(use-package! wakatime-mode
+  :config
+  (setq wakatime-api-key "dc57193b-a9db-484b-b2b8-732d130a346f"
+        wakatime-cli-path "~/.wakatime/wakatime-cli")
+  (global-wakatime-mode))
+#+end_src
+*** lsp-tailwindcss
+#+begin_src emacs-lisp
+(use-package! lsp-tailwindcss)
+
+(add-hook! 'before-save-hook 'lsp-tailwindcss-rustywind-before-save)
+#+end_src
+*** lsp-origami
+#+begin_src emacs-lisp
+(use-package! lsp-origami
+  :config
+  (setq lsp-enable-folding t)
+  (add-hook! 'lsp-after-open-hook #'lsp-origami-try-enable))
+#+end_src
+
+* Hydras
+** string-inflection
+#+begin_src emacs-lisp
+(defun my-string-inflection-cycle-auto ()
+  "switching by major-mode"
+  (interactive)
+  (cond
+   ;; for emacs-lisp-mode
+   ((eq major-mode 'emacs-lisp-mode)
+    (string-inflection-all-cycle))
+   ;; for python
+   ((eq major-mode 'python-mode)
+    (string-inflection-python-style-cycle))
+   ;; for java
+   ((eq major-mode 'java-mode)
+    (string-inflection-java-style-cycle))
+   (t
+    ;; default
+    (string-inflection-ruby-style-cycle))))
+
+(defhydra hydra-string-inflection ()
+  "string inflection"
+  ("i" my-string-inflection-cycle-auto "cycle")
+  ("l" string-inflection-lower-camelcase "lower camel")
+  ("c" string-inflection-camelcase "camel")
+  ("k" string-inflection-kebab-case "kebab")
+  ("u" string-inflection-underscore "underscore")
+  ("U" string-inflection-upcase "upcase")
+  ("q" nil "quit"))
+#+end_src
+
+** expand region
+#+begin_src emacs-lisp
+(defhydra hydra-expand (:hint nil :columns 1 :body-pre (er/expand-region 1))
+  ("c" er/contract-region "Contract")
+  ("e" er/expand-region "Expand"))
+#+end_src
+
+** scrolling
+#+begin_src emacs-lisp
+(defhydra hydra-scroll ()
+  "line scrolling"
+  ("k" #'evil-scroll-line-up)
+  ("j" #'evil-scroll-line-down)
+  ("t" #'evil-scroll-line-to-top)
+  ("b" #'evil-scroll-line-to-bottom)
+  ("c" #'evil-scroll-line-to-center)
+  ("q" nil "quit"))
+#+end_src
+
+** line moving
+#+begin_src emacs-lisp
+(defhydra hydra-move-line (:color red :hint nil)
+  "
+ Move Line^^
+------------------
+ [_k_] up
+ [_j_] down
+ [_q_] Quit"
+
+  ("k" move-text-line-up)
+  ("j" move-text-line-down)
+  ("q" nil))
+#+end_src
+
+** centaur tab
+#+begin_src emacs-lisp
+(defhydra hydra-centaur (:color red
+                         :hint nil)
+  "
+_l_: next
+_h_: previous
+_d_: kill this buffer
+_k_: kill other buffers
+_q_: quit
+  "
+  ("l" centaur-tabs-forward)
+  ("h" centaur-tabs-backward)
+  ("d" kill-this-buffer)
+  ("k" doom/kill-other-buffers)
+  ("q" nil :color blue))
+#+end_src
+
+** multiple cursor
+#+begin_src emacs-lisp
+(defhydra hydra-multiple-cursors (:color pink :hint nil)
+  "
+^Match^            ^Line-wise^           ^Manual^
+^^^^^^----------------------------------------------------
+_Z_: match all     _J_: make & go down   _z_: toggle here
+_m_: make & next   _K_: make & go up
+_M_: make & prev   ^ ^
+_n_: skip & next   ^ ^                   _p_: pause/resume
+_N_: skip & prev
+"
+  ("Z" #'evil-mc-make-all-cursors)
+  ("m" #'evil-mc-make-and-goto-next-match)
+  ("M" #'evil-mc-make-and-goto-prev-match)
+  ("n" #'evil-mc-skip-and-goto-next-match)
+  ("N" #'evil-mc-skip-and-goto-prev-match)
+  ("J" #'evil-mc-make-cursor-move-next-line)
+  ("K" #'evil-mc-make-cursor-move-prev-line)
+  ("z" #'+multiple-cursors/evil-mc-toggle-cursor-here)
+  ("p" #'+multiple-cursors/evil-mc-toggle-cursors)
+  ("q" nil "quit")
+  ("<escape>" #'evil-mc-resume-cursors "quit" :color blue))
+#+end_src
+
+* Languages
+** emacs-lisp-mode
+#+begin_src emacs-lisp
+(add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
+#+end_src
+** lsp-mode
+#+begin_src emacs-lisp
+(setq lsp-idle-delay 0.5
+      lsp-use-plists "true"
+      lsp-solargraph-use-bundler t
+      lsp-solargraph-multi-root nil)
+
+(after! lsp-ui
+  (setq lsp-ui-sideline-enable nil
+        lsp-ui-sideline-show-code-actions t
+        lsp-ui-sideline-show-diagnostics t
+        lsp-ui-sideline-show-hover nil
+        lsp-log-io nil
+        lsp-diagnostics-provider :auto
+        lsp-enable-symbol-highlighting t
+        lsp-headerline-breadcrumb-enable nil
+        lsp-headerline-breadcrumb-segments '(symbols)
+        lsp-ui-peek-enable t))
+#+end_src
+
+** org-mode
+#+begin_src emacs-lisp
+(after! ox-html (require 'ox-tailwind))
+#+end_src
+
+** ruby-mode
+#+begin_src emacs-lisp
+(setq rspec-use-spring-when-possible t)
+
+(add-hook! 'ruby-mode-hook #'rbenv-use-corresponding)
+(add-hook! 'ruby-mode-hook #'rainbow-delimiters-mode)
+
+(setq-hook! 'ruby-mode-hook +format-with-lsp nil)
+
+;; ruby formatter
+(set-formatter! 'rubocop '("rubocop" "-A" "--format" "emacs" "--fail-level" "error" "--stderr" "--stdin" filepath) :modes '(ruby-mode))
+
+;; (set-formatter! 'erbformatter '("erb-format" "--stdin" "--print-width" "200") :modes '(web-mode))
+;; (set-formatter! 'htmlbeautifier' ("htmlbeautifier") :modes '(web-mode))
+
+;; erb formatter
+(set-formatter! 'htmlbeautifier' ("htmlbeautifier" "--keep-blank-lines" "1") :modes '(web-mode))
+#+end_src
+
+** makefile-mode
+#+begin_src emacs-lisp
+(add-hook 'makefile-mode-hook
+          (lambda()
+            (setq indent-tabs-mode t)))
+#+end_src
+
+** web-mode
+#+begin_src emacs-lisp
+ (add-to-list 'auto-mode-alist '("\\.mjml\\'" . web-mode))
+#+end_src
+
+* Key bindings
+** Local leader
+#+begin_src emacs-lisp
+(setq doom-localleader-key ",")
+#+end_src
+
+** Additional leader mappings
+#+begin_src emacs-lisp
+(map! :leader
+      :desc "Copy file name" "fn" 'buffer/copy-file-name
+      :desc "Dried" "d" 'dired
+      :desc "Fullscreen" "Io" '+zen/toggle-fullscreen)
+#+end_src
+
+** General actions
+#+begin_src emacs-lisp
+
+;; normal mode
+(map! :n "C-k" #'kill-whole-line)
+(map! :n "C-d" 'duplicate-line)
+
+;; insert mode
+(map! :i "s-/" 'hippie-expand)
+(map! :i "C-/" 'cape-dabbrev)
+
+;; visual mode
+(map! :v "C-c i" 'edit-indirect-region)
+(map! :v "C-e" 'expreg-expand)
+(map! :v "C-S-e" 'expreg-contract)
+;; any mode
+
+#+end_src
+
+** ; leader mappings
+#+begin_src emacs-lisp
+(map! :n ";a" 'treemacs-select-window)
+(map! :n ";w" '+hydra/window-nav/body)
+(map! :n ";b" 'hydra-centaur/body)
+(map! :n ";e" 'hydra-expand/body)
+(map! :n ";s" 'hydra-scroll/body)
+(map! :n ";l" 'hydra-move-line/body)
+(map! :n ";i" 'hydra-string-inflection/body)
+(map! :n ";d" 'hydra-multiple-cursors/body)
+(map! :n ";f" 'avy-goto-line)
+#+end_src
+
+** g leader mappings
+#+begin_src emacs-lisp
+(map! :n "gl" 'centaur-tabs-forward) ;; next tab
+(map! :n "gh" 'centaur-tabs-backward) ;; previous tab
+(map! :n "gw" 'ace-window) ;; select window
+#+end_src
+
+** C-i leader mappings
+#+begin_src emacs-lisp
+(map! :i "C-i s" #'yasnippet-capf)
+(map! :i "C-i d" #'cape-dabbrev)
+(map! :i "C-i w" #'cape-dict)
+(map! :i "C-i y" #'cape-symbol)
+(map! :i "C-i f" #'cape-file)
+(map! :i "C-i k" #'cape-keyword)
+(map! :i "C-i l" #'cape-line)
+(map! :i "C-i t" #'cape-tex)
+(map! :i "C-i &" #'cape-sgml)
+(map! :i "C-i r" #'cape-rfc1345)
+(map! :i "C-i h" #'cape-history)
+(map! :i "C-i e" #'emmet-expand-line)
+#+end_src
+
+* Ruby on rails
+#+begin_src emacs-lisp
+(defun load-libraries ()
+  (load (expand-file-name "libraries/http.el" doom-private-dir))
+  (map! :leader :desc "Rails" "r" #'projectile-rails-command-map)
+  (require 'projectile-rails))
+
+(add-hook! 'doom-first-buffer-hook 'load-libraries)
+
+(after! web-mode
+  (set-lookup-handlers! 'web-mode
+    :definition '(projectile-rails-goto-file-at-point rails-routes-jump)))
+
+(after! ruby-mode
+  ;; SPC m C to copy class name, super useful to test things on console.
+  (defun endless/-ruby-symbol-at-point ()
+    (let ((l (point)))
+      (save-excursion
+        (forward-sexp 1)
+        (buffer-substring l (point)))))
+
+  (defun endless/ruby-copy-class-name ()
+    (interactive)
+    (save-excursion
+      (let ((name nil)
+            (case-fold-search nil))
+        (skip-chars-backward (rx (syntax symbol)))
+        (when (looking-at-p "\\_<[A-Z]")
+          (setq name (endless/-ruby-symbol-at-point)))
+        (while (ignore-errors (backward-up-list) t)
+          (when (looking-at-p "class\\|module")
+            (save-excursion
+              (forward-word 1)
+              (skip-chars-forward "\r\n[:blank:]")
+              (setq name (if name
+                             (concat (endless/-ruby-symbol-at-point) "::" name)
+                           (endless/-ruby-symbol-at-point))))))
+        (kill-new name)
+        (message "Copied %s" name))))
+
+  ;; binding it to SPC m c
+  (map! :map ruby-mode-map :desc "Copy Class Name" :localleader "c" #'endless/ruby-copy-class-name))
+
+;; Rails Routes Plugin
+(after! web-mode
+  (define-key web-mode-map (kbd "C-c o") #'rails-routes-insert)
+  (define-key web-mode-map (kbd "C-c C-o") #'rails-routes-insert-no-cache))
+
+(after! ruby-mode
+  (map! :mode ruby-mode "C-c o" #'rails-routes-insert)
+  (map! :mode ruby-mode "C-c C-o" #'rails-routes-insert-no-cache))
+
+(after! evil
+  (define-key evil-normal-state-map (kbd "g a") #'rails-routes-jump)
+  (define-key evil-visual-state-map (kbd "g a") #'rails-routes-jump))
+
+;; Ruby Json to hash
+(after! ruby-mode
+  (map! :mode ruby-mode :localleader "J" 'ruby-json-to-hash-parse-json) ;; Parse the json, SPC m J
+  (map! :mode ruby-mode :localleader "j" 'ruby-json-to-hash-toggle-let)) ;; Create a let or send the let back to parent. SPC m j
+
+;; Ruby Insert I18n
+(after! ruby-mode
+  (map! :map ruby-mode-map "C-c i" 'rails-i18n-insert-with-cache) ;; Search with cache on ruby mode
+  (map! :map ruby-mode-map "C-c C-i" 'rails-i18n-insert-no-cache) ;; Search refresh cache on ruby modee
+  (map! :map web-mode-map "C-c i" 'rails-i18n-insert-with-cache) ;; Search with cache on web-mode
+  (map! :map web-mode-map "C-c C-i" 'rails-i18n-insert-no-cache)) ;; Search refresh cache web-mode
+
+;; HTTP Plugin
+(after! ruby-mode
+  (define-key ruby-mode-map (kbd "C-c s") #'rails-http-statuses-insert-symbol)
+  (define-key ruby-mode-map (kbd "C-c S") #'rails-http-statuses-insert-code))
+;; Split Giant String
+(defvar split-ruby-giant-string-default 125)
+
+(after! ruby-mode
+  (defun otavio/split-ruby-giant-string (&optional line-split-real)
+    (interactive)
+    (if (not line-split-real)
+        (setq line-split-real (read-number "split in column:" split-ruby-giant-string-default)))
+    (setq line-split (- line-split-real 3))
+    (move-to-column line-split)
+    (setq char-at-point-is-closing (eq ?\" (char-after)))
+    (if (not char-at-point-is-closing)
+        (if (eq (current-column) line-split)
+            (progn
+              ;; Start refactoring
+              (if (< (+ (current-indentation) 5 (length (word-at-point))) line-split)
+                  (backward-word))
+              (insert "\"\"")
+              (backward-char)
+              (newline)
+              (forward-line -1)
+              (end-of-line)
+              (insert " \\")
+              (forward-line 1)
+              (indent-according-to-mode)
+              (end-of-line)
+              (if (> (current-column) line-split-real)
+                  (otavio/split-ruby-giant-string line-split-real)
+                )
+              )
+          )))
+
+  (map! :map ruby-mode-map :localleader :desc "Split giant string" "S" #'otavio/split-ruby-giant-string))
+
+(after! projectile-rails
+  (defun projectile-rails-find-view-component ()
+    "Find a view component."
+    (interactive)
+    (projectile-rails-find-resource
+     "component: "
+     '(("app/components/" "\\(.+\\)"))
+     "app/components/${filename}.rb"))
+
+  (defun projectile-rails-find-service ()
+    "Find a service object."
+    (interactive)
+    (projectile-rails-find-resource
+     "service: "
+     '(("app/services/" "\\(.+\\)\\.rb$"))
+     "app/services/${filename}.rb"))
+
+  (defun projectile-rails-find-stimulus ()
+    "Find a stimulus controller"
+    (interactive)
+    (projectile-rails-find-resource
+     "stimulus: "
+     '(("app/vite/javascripts/controllers/" "\\(.+\\)_controller\\.js$"))
+     "app/vite/javascripts/controllers/${filename}_controller.js"))
+
+  (defun projectile-rails-find-preview ()
+    "Find a policy object."
+    (interactive)
+    (projectile-rails-find-resource
+     "preview: "
+     '(("app/previews/" "\\(.+\\)"))
+     "app/previews/${filename}.rb"))
+
+  (defun projectile-rails-find-form ()
+    "Find a form object."
+    (interactive)
+    (projectile-rails-find-resource
+     "form:"
+     '(("app/forms/" "\\(.+\\)"))
+     "app/forms/${filename}_form.rb"))
+
+  (map! :leader "rp" #'projectile-rails-find-view-component)
+  (map! :leader "rs" #'projectile-rails-find-service)
+  (map! :leader "ro" #'projectile-rails-find-preview)
+  (map! :leader "rd" #'projectile-rails-find-spec)
+  (map! :leader "rq" #'projectile-rails-find-stimulus)
+  (map! :leader "rf" #'projectile-rails-find-form)
+  )
+#+end_src

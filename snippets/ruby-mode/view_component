@@ -1,0 +1,20 @@
+# -*- mode: snippet -*-
+# name: view component
+# key: vc
+# --
+class ${1:name}Component < ApplicationComponent
+  def initialize(**root_props)
+    @root_props = root_props
+  end
+
+  def root_props
+    @root_props.tap do |props|
+    props[:tag] ||= "div"
+    props[:classes] = class_names(
+      props[:classes],
+      "$1"
+    )
+  end
+
+  $0
+end
