@@ -21,6 +21,7 @@
   - [[#line-moving][line moving]]
   - [[#centaur-tab][centaur tab]]
   - [[#multiple-cursor][multiple cursor]]
+  - [[#web-mode-block-interaction-hydra][web mode block interaction hydra]]
 - [[#languages][Languages]]
   - [[#emacs-lisp-mode][emacs-lisp-mode]]
   - [[#lsp-mode][lsp-mode]]
@@ -230,11 +231,11 @@ Allow C-h and C-l to switch buffers
 #+begin_src emacs-lisp
 (use-package! highlight-indent-guides
   :config
-  (setq highlight-indent-guides-method 'column)
-  (setq highlight-indent-guides-responsive 'top)
-  (setq highlight-indent-guides-auto-character-face-perc 20)
-  (setq highlight-indent-guides-auto-even-face-perc 8)
-  (setq highlight-indent-guides-auto-character-face-perc 100))
+  (setq highlight-indent-guides-method 'column))
+  ;; (setq highlight-indent-guides-responsive 'top)
+  ;; (setq highlight-indent-guides-auto-character-face-perc 20)
+  ;; (setq highlight-indent-guides-auto-even-face-perc 8)
+  ;; (setq highlight-indent-guides-auto-character-face-perc 100))
 #+end_src
 
 *** evil
@@ -462,6 +463,20 @@ Allow C-h and C-l to switch buffers
     ("<escape>" #'evil-mc-resume-cursors "quit" :color blue))))
 #+end_src
 
+** web mode block interaction hydra
+#+begin_src emacs-lisp
+(pretty-hydra-define hydra-web-block-interaction (:color red)
+  ("Code block interaction"
+   (("s" #'web-mode-navigate "match block")
+    ("j" #'web-mode-block-next "next block")
+    ("k" #'web-mode-block-previous "previous block")
+    ("t" #'web-mode-fold-or-unfold "fold or unfold")
+    ("v" #'my/web-mode-select-next-block "select block" :color blue)
+    )
+   )
+  )
+#+end_src
+
 * Languages
 ** emacs-lisp-mode
 #+begin_src emacs-lisp
@@ -533,13 +548,40 @@ Allow C-h and C-l to switch buffers
 
 ** web-mode
 #+begin_src emacs-lisp
+(defun my/web-mode-select-next-block ()
+  "Navigate to and select the next code block in web-mode."
+  (interactive)
+  ;; (set-mark-command nil)
+  ;; (web-mode-navigate)
+  ;; (activate-mark)
+
+  (push-mark (point) nil t)  ; Push the current position to the mark ring
+  (beginning-of-line)        ; Move cursor to the beginning of the line
+  (set-mark (point))         ; Set mark at the beginning of the line
+  (web-mode-navigate)      ; Navigate to the next block in web-mode
+  (end-of-line)              ; Move cursor to the end of the destination line
+  (activate-mark)           ; Activate the selection
+  )
 
 (add-to-list 'auto-mode-alist '("\\.mjml\\'" . web-mode))
 
 (after! web-mode
+  (setq web-mode-enable-engine-detection t)
   (add-to-list 'web-mode-engines-alist '("erb" . "\\.erb\\'"))
   (add-to-list 'web-mode-engines-alist '("erb" . "\\.mjml\\'"))
+
+  (map! :map web-mode-map
+        :n "#" #'web-mode-navigate
+        :n "C-#" #'my/web-mode-select-next-block
+        :n ";j" #'hydra-web-block-interaction/body
+        )
   )
+
+(setq web-mode-enable-current-element-highlight t
+      web-mode-enable-auto-quoting t
+      web-mode-enable-comment-interpolation t
+      web-mode-enable-current-column-highlight t)
+
 #+end_src
 
 * Key bindings
@@ -558,6 +600,7 @@ Allow C-h and C-l to switch buffers
 
 ** General actions
 #+begin_src emacs-lisp
+(map! "s-<SPC>" #'set-mark-command)
 
 ;; normal mode
 (map! :n "C-k" #'kill-whole-line)
