@@ -21,7 +21,7 @@
   - [[#line-moving][line moving]]
   - [[#centaur-tab][centaur tab]]
   - [[#multiple-cursor][multiple cursor]]
-  - [[#web-mode-block-interaction-hydra][web mode block interaction hydra]]
+  - [[#web-mode-interaction-hydra][web mode interaction hydra]]
 - [[#languages][Languages]]
   - [[#emacs-lisp-mode][emacs-lisp-mode]]
   - [[#lsp-mode][lsp-mode]]
@@ -29,6 +29,7 @@
   - [[#ruby-mode][ruby-mode]]
   - [[#makefile-mode][makefile-mode]]
   - [[#web-mode][web-mode]]
+  - [[#js-mode][js-mode]]
 - [[#key-bindings][Key bindings]]
   - [[#local-leader][Local leader]]
   - [[#additional-leader-mappings][Additional leader mappings]]
@@ -65,7 +66,7 @@
 *** Misc
 #+begin_src emacs-lisp
 (setq read-process-output-max (* 5 1024 1024) ;; 5mb
-      which-key-idle-delay 0.5
+      which-key-idle-delay 0.1
       kill-whole-line t
       make-backup-files t
       ;; treemacs default width
@@ -78,6 +79,8 @@
       apheleia-log-debug-info t
       langtool-java-classpath "/usr/share/languagetool:/usr/share/java/languagetool/*"
       fancy-splash-image (expand-file-name "Emacs.svg" doom-private-dir)
+      doom-scratch-dir doom-private-dir
+      doom-scratch-default-file "scratch"
       scroll-up-aggressively 0.01
       scroll-down-aggressively 0.01
       ispell-program-name "aspell"
@@ -89,8 +92,9 @@
 
 (add-hook! 'solaire-mode-hook
   ;(set-face-attribute 'solaire-fringe-face nil :background (face-background 'solaire-hl-line-face))
-  (set-face-attribute 'fringe nil :background (face-background 'solaire-default-face))
-  )
+  (set-face-attribute 'fringe nil :background (face-background 'solaire-default-face)))
+
+(add-hook 'ibuffer-mode-hook #'nerd-icons-ibuffer-mode)
 #+end_src
 
 *** Custom faces
@@ -117,6 +121,7 @@
 ** Treemacs
 Allow C-h and C-l to switch buffers
 #+begin_src emacs-lisp
+
 (map!
  (:after treemacs-evil
    (:map evil-treemacs-state-map
@@ -128,6 +133,10 @@ Allow C-h and C-l to switch buffers
   (add-hook! 'treemacs-mode-hook (setq window-divider-mode -1
                                        variable-pitch-mode 1
                                        treemacs-follow-mode 1)))
+
+(use-package! treemacs-nerd-icons
+  :config
+  (treemacs-load-theme "nerd-icons"))
 #+end_src
 
 * Utility functions
@@ -197,6 +206,11 @@ Allow C-h and C-l to switch buffers
 (after! evil-snipe
   :config
   (setq evil-snipe-scope 'whole-buffer))
+#+end_src
+*** evil-surround
+#+begin_src emacs-lisp
+(with-eval-after-load 'evil-surround
+  (push '(?b . ("{" . "}")) evil-surround-pairs-alist))
 #+end_src
 
 *** rotate-text
@@ -463,18 +477,27 @@ Allow C-h and C-l to switch buffers
     ("<escape>" #'evil-mc-resume-cursors "quit" :color blue))))
 #+end_src
 
-** web mode block interaction hydra
+** web mode interaction hydra
 #+begin_src emacs-lisp
 (pretty-hydra-define hydra-web-block-interaction (:color red)
-  ("Code block interaction"
-   (("s" #'web-mode-navigate "match block")
-    ("j" #'web-mode-block-next "next block")
-    ("k" #'web-mode-block-previous "previous block")
+  ("Block"
+   (("s" #'web-mode-navigate "match")
+    ("j" #'web-mode-block-next "next")
+    ("k" #'web-mode-block-previous "previous")
     ("t" #'web-mode-fold-or-unfold "fold or unfold")
-    ("v" #'my/web-mode-select-next-block "select block" :color blue)
-    )
-   )
-  )
+    ("v" #'my/web-mode-select-next-block "select" :color blue))))
+
+(pretty-hydra-define hydra-web-attribute-interaction (:color red)
+  ("Attribute"
+   (("j" #'web-mode-attribute-next "next")
+    ("k" #'web-mode-attribute-previous "previous")
+    ("d" #'web-mode-attribute-kill "delete")
+    ("v" #'web-mode-attribute-select "delete" :color blue))))
+
+(pretty-hydra-define hydra-web-mode (:color blue)
+  ("Web mode interaction"
+   (("b" #'hydra-web-block-interaction/body "block")
+    ("a" #'hydra-web-attribute-interaction/body "attribute"))))
 #+end_src
 
 * Languages
@@ -484,10 +507,12 @@ Allow C-h and C-l to switch buffers
 #+end_src
 ** lsp-mode
 #+begin_src emacs-lisp
-(setq lsp-idle-delay 0.5
-      lsp-use-plists "true"
+(setq lsp-idle-delay 0.3
+      ;; lsp-use-plists "true"
+      ;; lsp-ruby-lsp-use-bundler t
       lsp-solargraph-use-bundler t
-      lsp-solargraph-multi-root nil)
+      lsp-solargraph-multi-root nil
+      )
 
 (after! lsp-ui
   (setq lsp-ui-sideline-enable nil
@@ -500,6 +525,13 @@ Allow C-h and C-l to switch buffers
         lsp-headerline-breadcrumb-enable nil
         lsp-headerline-breadcrumb-segments '(symbols)
         lsp-ui-peek-enable t))
+
+;; (after! lsp-mode
+;;   (add-to-list 'lsp-language-id-configuration '(ruby-mode . "ruby"))
+;;   (lsp-register-client
+;;    (make-lsp-client :new-connection (lsp-stdio-connection '("ruby-lsp"))
+;;                     :major-modes '(ruby-mode)
+;;                     :server-id 'ruby-lsp)))
 #+end_src
 
 ** org-mode
@@ -573,7 +605,7 @@ Allow C-h and C-l to switch buffers
   (map! :map web-mode-map
         :n "#" #'web-mode-navigate
         :n "C-#" #'my/web-mode-select-next-block
-        :n ";j" #'hydra-web-block-interaction/body
+        :n ";j" #'hydra-web-mode/body
         )
   )
 
@@ -582,6 +614,11 @@ Allow C-h and C-l to switch buffers
       web-mode-enable-comment-interpolation t
       web-mode-enable-current-column-highlight t)
 
+#+end_src
+** js-mode
+#+begin_src emacs-lisp
+(use-package! js2-mode
+  :mode "\\.js\\'")
 #+end_src
 
 * Key bindings
@@ -605,6 +642,7 @@ Allow C-h and C-l to switch buffers
 ;; normal mode
 (map! :n "C-k" #'kill-whole-line)
 (map! :n "C-d" 'duplicate-line)
+(map! :n "C-s" #'save-buffer)
 
 ;; insert mode
 (map! :i "s-/" 'hippie-expand)
