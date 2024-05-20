@@ -95,3 +95,5 @@
 (package! treemacs-nerd-icons)
 (package! nerd-icons-ibuffer)
 (package! nerd-icons-corfu)
+(package! popup)
+(package! exec-path-from-shell)

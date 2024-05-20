@@ -7,10 +7,13 @@
   - [[#personal-information][Personal information]]
   - [[#appearance][Appearance]]
   - [[#treemacs][Treemacs]]
+  - [[#shell-environment-zsh][Shell environment (zsh)]]
 - [[#utility-functions][Utility functions]]
   - [[#duplicate-line][Duplicate line]]
   - [[#copy-filename-of-current-buffer][Copy filename of current buffer]]
   - [[#check-rails-project][Check rails project]]
+  - [[#insert-number-at-the-beginningend-of-lines][Insert number at the beginning/end of lines]]
+  - [[#peek-folded-region][Peek folded region]]
 - [[#packages][Packages]]
   - [[#doom-built-in-packages][Doom built-in packages]]
   - [[#extra-packages][Extra packages]]
@@ -21,12 +24,14 @@
   - [[#line-moving][line moving]]
   - [[#centaur-tab][centaur tab]]
   - [[#multiple-cursor][multiple cursor]]
-  - [[#web-mode-interaction-hydra][web mode interaction hydra]]
+  - [[#web-mode-interaction][web mode interaction]]
+  - [[#rectangle-interaction][rectangle interaction]]
 - [[#languages][Languages]]
   - [[#emacs-lisp-mode][emacs-lisp-mode]]
   - [[#lsp-mode][lsp-mode]]
   - [[#org-mode][org-mode]]
   - [[#ruby-mode][ruby-mode]]
+  - [[#rspec-mode][rspec-mode]]
   - [[#makefile-mode][makefile-mode]]
   - [[#web-mode][web-mode]]
   - [[#js-mode][js-mode]]
@@ -36,6 +41,7 @@
   - [[#general-actions][General actions]]
   - [[#-leader-mappings][; leader mappings]]
   - [[#g-leader-mappings][g leader mappings]]
+  - [[#z-leader-mappings][z leader mappings]]
   - [[#c-i-leader-mappings][C-i leader mappings]]
 - [[#ruby-on-rails][Ruby on rails]]
 
@@ -133,12 +139,20 @@ Allow C-h and C-l to switch buffers
   (add-hook! 'treemacs-mode-hook (setq window-divider-mode -1
                                        variable-pitch-mode 1
                                        treemacs-follow-mode 1)))
-
-(use-package! treemacs-nerd-icons
-  :config
-  (treemacs-load-theme "nerd-icons"))
 #+end_src
 
+** Shell environment (zsh)
+Add those lines to $HOME/.zshenv
+export RBENV_ROOT="$HOME/.rbenv"
+export PATH="$HOME/.rbenv/shims:${PATH}"
+
+#+begin_src emacs-lisp
+(use-package! exec-path-from-shell
+  :init
+  (setq exec-path-from-shell-shell-name "/usr/bin/zsh")  ; Specify Zsh as the shell
+  (setq exec-path-from-shell-arguments nil)          ; Avoid problems caused by interactive shell initialization
+  (exec-path-from-shell-initialize))
+#+end_src
 * Utility functions
 ** Duplicate line
 #+begin_src emacs-lisp
@@ -199,6 +213,60 @@ Allow C-h and C-l to switch buffers
        (locate-dominating-file (buffer-file-name) "config/application.rb")))
 #+end_src
 
+** Insert number at the beginning/end of lines
+#+begin_src emacs-lisp
+(defun insert-number-at-beginning-region (start end start-number)
+  "Number lines in the region from START to END, beginning with START-NUMBER."
+  (interactive "r\nnStart numbering at: ")
+  (let* ((lines (count-lines start end))
+         (from start-number)
+         (to (+ lines (1- from)))
+         (numbers (number-sequence from to))
+         (width (max (length (int-to-string to))
+                     (length (int-to-string from)))))
+    (if (= start (point))
+        (setq numbers (reverse numbers)))
+    (goto-char start)
+    (dolist (n numbers)
+      (beginning-of-line)
+      (save-match-data
+        (if (looking-at " *-?[0-9]+\\. ")
+            (replace-match "")))
+      (insert (format (concat "%" (int-to-string width) "d ") n))
+      (forward-line 1))))
+
+(defun insert-number-at-end-region (start end start-number)
+  "Number lines in the region from START to END, appending starting with START-NUMBER."
+  (interactive "r\nnStart numbering at: ")
+  (let* ((lines (count-lines start end))
+         (from start-number)
+         (to (+ lines (1- from)))
+         (numbers (number-sequence from to))
+         (width (max (length (int-to-string to))
+                     (length (int-to-string from)))))
+    (if (= start (point))
+        (setq numbers (reverse numbers)))
+    (goto-char start)
+    (dolist (n numbers)
+      (end-of-line)  ; Move to the end of the line
+      (insert (format " %d" n))  ; Insert the number at the end of the line
+      (forward-line 1))))
+#+end_src
+** Peek folded region
+#+begin_src emacs-lisp
+(use-package! popup)
+
+(defun show-folded-region ()
+  "Show the contents of the folded region temporarily in a tooltip."
+  (interactive)
+  (let ((content (save-excursion
+                   (hs-show-block)
+                   (let ((contents (buffer-substring-no-properties (point)
+                                                                    (progn (forward-sexp 1) (point)))))
+                     (hs-hide-block)
+                     contents))))
+    (popup-tip content)))
+#+end_src
 * Packages
 ** Doom built-in packages
 *** evil-snipe
@@ -342,18 +410,11 @@ Allow C-h and C-l to switch buffers
 (use-package! move-text)
 #+end_src
 
-*** yafolding
-#+begin_src emacs-lisp
-
-(use-package! yafolding
-  :hook (web-mode . yafolding-mode))
-#+end_src
 *** auto-dim-other-buffers
 #+begin_src emacs-lisp
 (add-hook 'after-init-hook (lambda ()
                              (when (fboundp 'auto-dim-other-buffers-mode)
-                               (auto-dim-other-buffers-mode t)
-                               )))
+                               (auto-dim-other-buffers-mode t))))
 #+end_src
 *** expreg (language specific expand region)
 #+begin_src emacs-lisp
@@ -477,7 +538,7 @@ Allow C-h and C-l to switch buffers
     ("<escape>" #'evil-mc-resume-cursors "quit" :color blue))))
 #+end_src
 
-** web mode interaction hydra
+** web mode interaction
 #+begin_src emacs-lisp
 (pretty-hydra-define hydra-web-block-interaction (:color red)
   ("Block"
@@ -500,6 +561,37 @@ Allow C-h and C-l to switch buffers
     ("a" #'hydra-web-attribute-interaction/body "attribute"))))
 #+end_src
 
+
+** rectangle interaction
+#+begin_src emacs-lisp
+(defhydra hydra-rectangle (:body-pre (rectangle-mark-mode 1)
+                                     :color pink
+                                     :hint nil
+                                     :post (deactivate-mark))
+  "
+  ^_k_^       _w_ copy      _o_pen       _N_umber-lines            |\\     -,,,--,,_
+_h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..  \-;;,_
+  ^_j_^       _d_ kill      _c_lear      _r_eset-region-mark      |,4-  ) )_   .;.(  `'-'
+^^^^          _u_ndo        _g_ quit     ^ ^                     '---''(./..)-'(_\_)
+"
+  ("k" rectangle-previous-line)
+  ("j" rectangle-next-line)
+  ("h" rectangle-backward-char)
+  ("l" rectangle-forward-char)
+  ("d" kill-rectangle)                    ;; C-x r k
+  ("y" yank-rectangle)                    ;; C-x r y
+  ("w" copy-rectangle-as-kill)            ;; C-x r M-w
+  ("o" open-rectangle)                    ;; C-x r o
+  ("t" string-rectangle)                  ;; C-x r t
+  ("c" clear-rectangle)                   ;; C-x r c
+  ("e" rectangle-exchange-point-and-mark) ;; C-x C-x
+  ("N" rectangle-number-lines)            ;; C-x r N
+  ("r" (if (region-active-p)
+           (deactivate-mark)
+         (rectangle-mark-mode 1)))
+  ("u" undo nil)
+  ("g" nil))      ;; ok
+#+end_src
 * Languages
 ** emacs-lisp-mode
 #+begin_src emacs-lisp
@@ -554,8 +646,6 @@ Allow C-h and C-l to switch buffers
 
 ** ruby-mode
 #+begin_src emacs-lisp
-(setq rspec-use-spring-when-possible t)
-
 (add-hook! 'ruby-mode-hook #'rbenv-use-corresponding)
 (add-hook! 'ruby-mode-hook #'rainbow-delimiters-mode)
 
@@ -569,6 +659,23 @@ Allow C-h and C-l to switch buffers
 
 ;; erb formatter
 (set-formatter! 'htmlbeautifier' ("htmlbeautifier" "--keep-blank-lines" "1") :modes '(web-mode))
+
+#+end_src
+
+** rspec-mode
+#+begin_src emacs-lisp
+(setq rspec-use-spring-when-possible t)
+
+(after! rspec-mode
+  (map! :map rspec-mode-map
+        :localleader
+        "ty" #'rspec-yank-last-command
+        "tg" #'rspec-find-spec-or-target-other-window))
+
+(after! ruby-mode
+  (map! :map ruby-mode-map
+        :localleader
+        "tg" #'rspec-find-spec-or-target-other-window))
 #+end_src
 
 ** makefile-mode
@@ -595,10 +702,12 @@ Allow C-h and C-l to switch buffers
   (activate-mark)           ; Activate the selection
   )
 
-(add-to-list 'auto-mode-alist '("\\.mjml\\'" . web-mode))
 
 (after! web-mode
   (setq web-mode-enable-engine-detection t)
+  
+  (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.mjml\\'" . web-mode))
   (add-to-list 'web-mode-engines-alist '("erb" . "\\.erb\\'"))
   (add-to-list 'web-mode-engines-alist '("erb" . "\\.mjml\\'"))
 
@@ -674,6 +783,11 @@ Allow C-h and C-l to switch buffers
 (map! :n "gl" 'centaur-tabs-forward) ;; next tab
 (map! :n "gh" 'centaur-tabs-backward) ;; previous tab
 (map! :n "gw" 'ace-window) ;; select window
+#+end_src
+
+** z leader mappings
+#+begin_src emacs-lisp
+(map! :n "zp" 'show-folded-region)
 #+end_src
 
 ** C-i leader mappings
