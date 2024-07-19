@@ -1,4 +1,4 @@
-#+TITLE: My doom emacs configuration
+# #+TITLE: My doom emacs configuration
 #+AUTHOR: Hoang Nghiem
 #+EMAIL: hoangnghiem1711@gmail.com
 
@@ -7,13 +7,12 @@
   - [[#personal-information][Personal information]]
   - [[#appearance][Appearance]]
   - [[#treemacs][Treemacs]]
-  - [[#shell-environment-zsh][Shell environment (zsh)]]
 - [[#utility-functions][Utility functions]]
   - [[#duplicate-line][Duplicate line]]
+  - [[#delete-blank-lines-of-current-buffer][Delete blank lines of current buffer]]
   - [[#copy-filename-of-current-buffer][Copy filename of current buffer]]
   - [[#check-rails-project][Check rails project]]
   - [[#insert-number-at-the-beginningend-of-lines][Insert number at the beginning/end of lines]]
-  - [[#peek-folded-region][Peek folded region]]
 - [[#packages][Packages]]
   - [[#doom-built-in-packages][Doom built-in packages]]
   - [[#extra-packages][Extra packages]]
@@ -21,7 +20,7 @@
   - [[#string-inflection][string-inflection]]
   - [[#expand-region][expand region]]
   - [[#scrolling][scrolling]]
-  - [[#line-moving][line moving]]
+  - [[#line][line]]
   - [[#centaur-tab][centaur tab]]
   - [[#multiple-cursor][multiple cursor]]
   - [[#web-mode-interaction][web mode interaction]]
@@ -55,13 +54,17 @@
 ** Appearance
 *** Colorscheme & font
 #+begin_src emacs-lisp
-(setq doom-font (font-spec :family "CommitMono Nerd Font" :size 20 :weight 'regular)
-      doom-variable-pitch-font (font-spec :family "CommitMono Nerd Font" :size 20)
+(setq doom-font (font-spec :family "Cascadia Code" :size 22 :weight 'regular)
+      doom-variable-pitch-font (font-spec :family "Cascadia Code" :size 22)
       doom-theme 'doom-one
+      corfu-auto-prefix 1
       display-line-numbers-type t
       doom-themes-treemacs-theme "doom-colors")
 
+(setq-default pgtk-wait-for-event-timeout 0)
 (setq-default line-spacing 0.2)
+
+;; (setq debug-on-error t)
 #+end_src
 
 *** Open emacs in fullscreen by default
@@ -75,13 +78,13 @@
       which-key-idle-delay 0.1
       kill-whole-line t
       make-backup-files t
+      delete-by-moving-to-trash t
       ;; treemacs default width
       treemacs-width 60
       org-latex-tables-booktabs t
       ;; org
       org-latex-toc-command "\\tableofcontents \\clearpage"
       expand-region-subword-enabled t
-      corfu-auto-prefix 1
       apheleia-log-debug-info t
       langtool-java-classpath "/usr/share/languagetool:/usr/share/java/languagetool/*"
       fancy-splash-image (expand-file-name "Emacs.svg" doom-private-dir)
@@ -90,7 +93,10 @@
       scroll-up-aggressively 0.01
       scroll-down-aggressively 0.01
       ispell-program-name "aspell"
-      ispell-dictionary "english")
+      ispell-dictionary "english"
+      +popup-defaults (plist-put +popup-defaults :height 0.3)
+      ;; company-frontend '(company-pseudo-tooltip-unless-just-one-frontend company-preview-if-just-one-frontend company-echo-metadata-frontend company-preview-frontend)
+      +tree-sitter-hl-enabled-modes nil)
 
 (setq yas-snippet-dirs
       (append yas-snippet-dirs
@@ -101,6 +107,101 @@
   (set-face-attribute 'fringe nil :background (face-background 'solaire-default-face)))
 
 (add-hook 'ibuffer-mode-hook #'nerd-icons-ibuffer-mode)
+
+(set-popup-rules!
+ '(("^ \\*" :slot -1) ; fallback rule for special buffers
+   ("^\\*" :select t :size 0.25)
+   ("^\\*Completions" :slot -1 :ttl 0)
+   ("^\\*\\(?:scratch\\|Messages\\)" :ttl t :size 0.25)
+   ("^\\*Help" :slot -1 :size 0.25 :select t)
+   ("^\\*doom:"
+    :size 0.35 :select t :modeline t :quit t :ttl t)))
+#+end_src
+
+*** Ligatures
+#+begin_src emacs-lisp
+;; Gathered from https://www.jetbrains.com/lp/mono/#ligatures
+;; The cheatsheat shows "\/" and "\" which I couldn't get working
+(let ((alist '(;;  -> -- --> ->> -< -<< --- -~ -|
+               (?- . ".\\(?:--\\|[->]>?\\|<<?\\|[~|]\\)")
+
+               ;; // /* /// /= /== />
+               ;; /** is not supported - see https://github.com/JetBrains/JetBrainsMono/issues/202
+               ;; /* cannot be conditioned on patterns followed by a whitespace,
+               ;; because that would require support for lookaheads in regex.
+               ;; We cannot just match on /*\s, because the whitespace would be considered
+               ;; as part of the match, but the font only specifies the ligature for /* with
+               ;; no trailing characters
+               ;;
+               (?/ . ".\\(?://?\\|==?\\|\\*\\*?\\|[>]\\)")
+
+               ;; */ *** *>
+               ;; Prevent grouping of **/ as *(*/) by actively looking for **/
+               ;; which consumes the triple but the font does not define a substitution,so it's rendered normally
+               (?* . ".\\(?:\\*/\\|\\*\\*\\|[>/]\\)")
+
+               ;; <!-- <<- <- <=> <= <| <|| <||| <|> <: <> <-< <<< <=< <<= <== <==>
+               ;; <~> << <-| <=| <~~ <~ <$> <$ <+> <+ <*> <* </ </> <->
+               (?< . ".\\(?:==>\\|!--\\|~~\\|-[|<]\\||>\\||\\{1,3\\}\\|<[=<-]?\\|=[><|=]?\\|[*+$~/-]>?\\|[:>]\\)")
+
+               ;; := ::= :?> :? :: ::: :< :>
+               (?: . ".\\(?:\\?>\\|:?=\\|::?\\|[>?<]\\)")
+
+               ;; == =:= === => =!= =/= ==> =>>
+               (?= . ".\\(?:[=>]?>\\|[:=!/]?=\\)")
+
+               ;;  != !== !!
+               (?! . ".\\(?:==?\\|!\\)")
+
+               ;; >= >> >] >: >- >>> >>= >>- >=>
+               (?> . ".\\(?:=>\\|>[=>-]\\|[]=:>-]\\)")
+
+               ;; && &&&
+               (?& . ".&&?")
+
+               ;; || |> ||> |||> |] |} |-> |=> |- ||- |= ||=
+               (?| . ".\\(?:||?>\\||[=-]\\|[=-]>\\|[]>}|=-]\\)")
+
+               ;; ... .. .? .= .- ..<
+               (?. . ".\\(?:\\.[.<]?\\|[.?=-]\\)")
+
+               ;; ++ +++ +>
+               (?+ . ".\\(?:\\+\\+?\\|>\\)")
+
+               ;; [| [< [||]
+               (?\[ . ".\\(?:|\\(?:|]\\)?\\|<\\)")
+
+               ;; {|
+               (?{ . ".|")
+
+               ;; ?: ?. ?? ?=
+               (?? . ".[:.?=]")
+
+               ;; ## ### #### #{ #[ #( #? #_ #_( #: #! #=
+               (?# . ".\\(?:#\\{1,3\\}\\|_(?\\|[{[(?:=!]\\)")
+
+               ;; ;;
+               (?\; . ".;")
+
+               ;; __ _|_
+               (?_ . ".|?_")
+
+               ;; ~~ ~~> ~> ~= ~- ~@
+               (?~ . ".\\(?:~>\\|[>@=~-]\\)")
+
+               ;; $>
+               (?$ . ".>")
+
+               ;; ^=
+               (?^ . ".=")
+
+               ;; ]#
+               (?\] . ".#")
+               )))
+  (dolist (char-regexp alist)
+
+    (set-char-table-range composition-function-table (car char-regexp)
+                          `([,(cdr char-regexp) 0 font-shape-gstring]))))
 #+end_src
 
 *** Custom faces
@@ -109,18 +210,17 @@
 ;; disable if using other theme
 (custom-set-faces!
   '(web-mode-block-delimiter-face :mode 'web-mode :foreground "#64748b")
+  '(web-mode-block-string-face :mode 'web-mode :foreground "#a6da95")
   '(web-mode-html-tag-bracket-face :mode 'web-mode :foreground "#64748b")
   '(web-mode-html-attr-equal-face :mode 'web-mode :foreground "#64748b")
-  '(web-mode-symbol-face :mode 'web-mode :foreground "#ECBE7B")
-  ;; '(web-mode-html-tag-face :mode 'web-mode :foreground "#da8548")
+  '(web-mode-symbol-face :mode 'web-mode :foreground "#f5a97f" :slant italic)
   '(web-mode-html-tag-face :mode 'web-mode :foreground "#ff6c6b")
-  ;; '(web-mode-html-tag-face :mode 'web-mode :foreground "#F472B6")
   '(web-mode-html-attr-name-face :mode 'web-mode :foreground "#bbc2cf")
-  ;; '(web-mode-html-attr-value-face :mode 'web-mode :foreground "#7DD3FC")
-  ;; '(web-mode-html-attr-value-face :mode 'web-mode :foreground "#46D9FF")
-  '(web-mode-html-attr-value-face :mode 'web-mode :foreground "#4db5bd")
+  '(web-mode-html-attr-value-face :mode 'web-mode :foreground "#8aadf4")
+  '(web-mode-keyword-face :mode 'web-mode :slant italic)
   '(hl-line :background "#1c1f24")
-  '(font-lock-comment-face :slant italic)
+  '(font-lock-comment-face :foreground "#85714c" :slant italic)
+  '(font-lock-string-face :foreground "#a6da95")
   '(font-lock-keyword-face :slant italic))
 #+end_src
 
@@ -141,18 +241,6 @@ Allow C-h and C-l to switch buffers
                                        treemacs-follow-mode 1)))
 #+end_src
 
-** Shell environment (zsh)
-Add those lines to $HOME/.zshenv
-export RBENV_ROOT="$HOME/.rbenv"
-export PATH="$HOME/.rbenv/shims:${PATH}"
-
-#+begin_src emacs-lisp
-(use-package! exec-path-from-shell
-  :init
-  (setq exec-path-from-shell-shell-name "/usr/bin/zsh")  ; Specify Zsh as the shell
-  (setq exec-path-from-shell-arguments nil)          ; Avoid problems caused by interactive shell initialization
-  (exec-path-from-shell-initialize))
-#+end_src
 * Utility functions
 ** Duplicate line
 #+begin_src emacs-lisp
@@ -192,6 +280,18 @@ export PATH="$HOME/.rbenv/shims:${PATH}"
   (next-line arg))
 #+end_src
 
+** Delete blank lines of current buffer
+#+begin_src emacs-lisp
+(defun flush-blank-lines ()
+  "Removes all blank lines from buffer or region"
+  (interactive)
+  (save-excursion
+    (let (min max)
+      (if (equal (region-active-p) nil)
+          (mark-whole-buffer))
+      (setq min (region-beginning) max (region-end))
+      (flush-lines "^ *$" min max t))))
+#+end_src
 ** Copy filename of current buffer
 #+begin_src emacs-lisp
 (defun clipboard/set (astring)
@@ -252,21 +352,6 @@ export PATH="$HOME/.rbenv/shims:${PATH}"
       (insert (format " %d" n))  ; Insert the number at the end of the line
       (forward-line 1))))
 #+end_src
-** Peek folded region
-#+begin_src emacs-lisp
-(use-package! popup)
-
-(defun show-folded-region ()
-  "Show the contents of the folded region temporarily in a tooltip."
-  (interactive)
-  (let ((content (save-excursion
-                   (hs-show-block)
-                   (let ((contents (buffer-substring-no-properties (point)
-                                                                    (progn (forward-sexp 1) (point)))))
-                     (hs-hide-block)
-                     contents))))
-    (popup-tip content)))
-#+end_src
 * Packages
 ** Doom built-in packages
 *** evil-snipe
@@ -305,16 +390,16 @@ export PATH="$HOME/.rbenv/shims:${PATH}"
 
 *** cape
 #+begin_src emacs-lisp
-(after! cape
-  (setq cape-dict-file "/usr/share/dict/words"))
+;; (after! cape
+;;   (setq cape-dict-file "/usr/share/dict/words"))
 #+end_src
 
 *** highlight-indent-guides
 #+begin_src emacs-lisp
 (use-package! highlight-indent-guides
   :config
-  (setq highlight-indent-guides-method 'column))
-  ;; (setq highlight-indent-guides-responsive 'top)
+  (setq highlight-indent-guides-method 'column)
+  (setq highlight-indent-guides-responsive 'top))
   ;; (setq highlight-indent-guides-auto-character-face-perc 20)
   ;; (setq highlight-indent-guides-auto-even-face-perc 8)
   ;; (setq highlight-indent-guides-auto-character-face-perc 100))
@@ -338,72 +423,76 @@ export PATH="$HOME/.rbenv/shims:${PATH}"
           (lambda (before-jump-p)
             (global-tree-sitter-mode (not before-jump-p)))))
 #+end_src
+
 *** visual-regexp-steroids
 #+begin_src emacs-lisp
 (use-package! visual-regexp-steroids)
 #+end_src
+
 *** codeium (code AI completion)
 #+begin_src emacs-lisp
-(use-package codeium
-  ;; if you use straight
-  ;; :straight '(:type git :host github :repo "Exafunction/codeium.el")
-  ;; otherwise, make sure that the codeium.el file is on load-path
+;; we recommend using use-package to organize your init.el
+;; (use-package codeium
+;;     ;; if you use straight
+;;     ;; :straight '(:type git :host github :repo "Exafunction/codeium.el")
+;;     ;; otherwise, make sure that the codeium.el file is on load-path
 
-  :init
-  ;; use globally
-  (add-to-list 'completion-at-point-functions #'codeium-completion-at-point)
-  ;; or on a hook
-  ;; (add-hook 'python-mode-hook
-  ;;     (lambda ()
-  ;;         (setq-local completion-at-point-functions '(codeium-completion-at-point))))
+;;     :init
+;;     ;; use globally
+;;     (add-to-list 'completion-at-point-functions #'codeium-completion-at-point)
+;;     ;; or on a hook
+;;     ;; (add-hook 'python-mode-hook
+;;     ;;     (lambda ()
+;;     ;;         (setq-local completion-at-point-functions '(codeium-completion-at-point))))
 
-  ;; if you want multiple completion backends, use cape (https://github.com/minad/cape):
-  ;; (add-hook 'prog-mode-hook
-  ;;           (lambda ()
-  ;;             (setq-local completion-at-point-functions
-  ;;                         (list (cape-super-capf #'codeium-completion-at-point #'lsp-completion-at-point)))))
-  ;; an async company-backend is coming soon!
+;;     ;; if you want multiple completion backends, use cape (https://github.com/minad/cape):
+;;     ;; (add-hook 'python-mode-hook
+;;     ;;     (lambda ()
+;;     ;;         (setq-local completion-at-point-functions
+;;     ;;             (list (cape-super-capf #'codeium-completion-at-point #'lsp-completion-at-point)))))
+;;     ;; an async company-backend is coming soon!
 
-  ;; codeium-completion-at-point is autoloaded, but you can
-  ;; optionally set a timer, which might speed up things as the
-  ;; codeium local language server takes ~0.2s to start up
-  ;; (add-hook 'emacs-startup-hook
-  ;;  (lambda () (run-with-timer 0.1 nil #'codeium-init)))
+;;     ;; codeium-completion-at-point is autoloaded, but you can
+;;     ;; optionally set a timer, which might speed up things as the
+;;     ;; codeium local language server takes ~0.2s to start up
+;;     ;; (add-hook 'emacs-startup-hook
+;;     ;;  (lambda () (run-with-timer 0.1 nil #'codeium-init)))
 
-  ;; :defer t ;; lazy loading, if you want
-  :config
-  (setq use-dialog-box t) ;; do not use popup boxes
+;;     ;; :defer t ;; lazy loading, if you want
+;;     :config
+;;     (setq use-dialog-box nil) ;; do not use popup boxes
 
-  ;; if you don't want to use customize to save the api-key
-  ;; (setq codeium/metadata/api_key "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+;;     ;; if you don't want to use customize to save the api-key
+;;     ;; (setq codeium/metadata/api_key "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 
-  ;; get codeium status in the modeline
-  (setq codeium-mode-line-enable
-        (lambda (api) (not (memq api '(CancelRequest Heartbeat AcceptCompletion)))))
-  (add-to-list 'mode-line-format '(:eval (car-safe codeium-mode-line)) t)
-  ;; alternatively for a more extensive mode-line
-  ;; (add-to-list 'mode-line-format '(-50 "" codeium-mode-line) t)
+;;     ;; get codeium status in the modeline
+;;     (setq codeium-mode-line-enable
+;;         (lambda (api) (not (memq api '(CancelRequest Heartbeat AcceptCompletion)))))
+;;     (add-to-list 'mode-line-format '(:eval (car-safe codeium-mode-line)) t)
+;;     ;; alternatively for a more extensive mode-line
+;;     ;; (add-to-list 'mode-line-format '(-50 "" codeium-mode-line) t)
 
-  ;; use M-x codeium-diagnose to see apis/fields that would be sent to the local language server
-  (setq codeium-api-enabled
-        (lambda (api)
-          (memq api '(GetCompletions Heartbeat CancelRequest GetAuthToken RegisterUser auth-redirect AcceptCompletion))))
-  ;; you can also set a config for a single buffer like this:
-  ;; (add-hook 'python-mode-hook
-  ;;     (lambda ()
-  ;;         (setq-local codeium/editor_options/tab_size 4)))
+;;     ;; use M-x codeium-diagnose to see apis/fields that would be sent to the local language server
+;;     (setq codeium-api-enabled
+;;         (lambda (api)
+;;             (memq api '(GetCompletions Heartbeat CancelRequest GetAuthToken RegisterUser auth-redirect AcceptCompletion))))
+;;     ;; you can also set a config for a single buffer like this:
+;;     ;; (add-hook 'python-mode-hook
+;;     ;;     (lambda ()
+;;     ;;         (setq-local codeium/editor_options/tab_size 4)))
 
-  ;; You can overwrite all the codeium configs!
-  ;; for example, we recommend limiting the string sent to codeium for better performance
-  (defun my-codeium/document/text ()
-    (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point) 1000) (point-max))))
-  ;; if you change the text, you should also change the cursor_offset
-  ;; warning: this is measured by UTF-8 encoded bytes
-  (defun my-codeium/document/cursor_offset ()
-    (codeium-utf8-byte-length
-     (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (point))))
-  (setq codeium/document/text 'my-codeium/document/text)
-  (setq codeium/document/cursor_offset 'my-codeium/document/cursor_offset))
+;;     ;; You can overwrite all the codeium configs!
+;;     ;; for example, we recommend limiting the string sent to codeium for better performance
+;;     (defun my-codeium/document/text ()
+;;         (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point) 1000) (point-max))))
+;;     ;; if you change the text, you should also change the cursor_offset
+;;     ;; warning: this is measured by UTF-8 encoded bytes
+;;     (defun my-codeium/document/cursor_offset ()
+;;         (codeium-utf8-byte-length
+;;             (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (point))))
+;;     (setq codeium/document/text 'my-codeium/document/text)
+;;     (setq codeium/document/cursor_offset 'my-codeium/document/cursor_offset))
+
 #+end_src
 *** move-text
 #+begin_src emacs-lisp
@@ -434,14 +523,14 @@ export PATH="$HOME/.rbenv/shims:${PATH}"
 
 (add-hook! 'before-save-hook 'lsp-tailwindcss-rustywind-before-save)
 #+end_src
-*** lsp-origami
+*** zeal-at-point
 #+begin_src emacs-lisp
-(use-package! lsp-origami
+(use-package zeal-at-point
+  :ensure t
+  :bind (("C-c d" . zeal-at-point))
   :config
-  (setq lsp-enable-folding t)
-  (add-hook! 'lsp-after-open-hook #'lsp-origami-try-enable))
+  (add-to-list 'zeal-at-point-mode-alist '(ruby-mode . ("ruby" "rails"))))
 #+end_src
-
 * Hydras
 ** string-inflection
 #+begin_src emacs-lisp
@@ -483,6 +572,14 @@ export PATH="$HOME/.rbenv/shims:${PATH}"
    (("c" er/contract-region "Contract")
     ("e" er/expand-region "Expand")))
   )
+
+(pretty-hydra-define hydra-regex-expand (:color red)
+  ("Regex expand region"
+   (("c" expreg-contract "Contract")
+    ("e" expreg-expand "Expand")
+    ("h" tree-sitter-mark-bigger-node "Bigger note")
+    ))
+  )
 #+end_src
 
 ** scrolling
@@ -497,12 +594,13 @@ export PATH="$HOME/.rbenv/shims:${PATH}"
 
 #+end_src
 
-** line moving
+** line
 #+begin_src emacs-lisp
 (pretty-hydra-define hydra-move-line (:color red :hint nil)
-  ("Move Line"
-   (("k" move-text-line-up "up")
-    ("j" move-text-line-down "down"))))
+  ("Line"
+   (("k" move-text-up "up")
+    ("j" move-text-down "down")
+    ("d" flush-blank-lines "flush-blank-lines"))))
 #+end_src
 
 ** centaur tab
@@ -561,7 +659,6 @@ export PATH="$HOME/.rbenv/shims:${PATH}"
     ("a" #'hydra-web-attribute-interaction/body "attribute"))))
 #+end_src
 
-
 ** rectangle interaction
 #+begin_src emacs-lisp
 (defhydra hydra-rectangle (:body-pre (rectangle-mark-mode 1)
@@ -593,61 +690,91 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
   ("g" nil))      ;; ok
 #+end_src
 * Languages
+
 ** emacs-lisp-mode
 #+begin_src emacs-lisp
 (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
 #+end_src
+
 ** lsp-mode
 #+begin_src emacs-lisp
-(setq lsp-idle-delay 0.3
-      ;; lsp-use-plists "true"
-      ;; lsp-ruby-lsp-use-bundler t
-      lsp-solargraph-use-bundler t
-      lsp-solargraph-multi-root nil
-      )
+(after! lsp-mode
+  (setq lsp-idle-delay 0.1
+        lsp-use-plists "true"
+        lsp-solargraph-use-bundler t
+        lsp-solargraph-multi-root nil
+        lsp-enable-symbol-highlighting nil
+        lsp-ui-doc-enable nil
+        lsp-file-watch-ignored-directories
+        '("[/\\\\]\\.git\\'"
+          "[/\\\\]node_modules\\'"
+          "[/\\\\]\\.hg\\'"
+          "[/\\\\]\\.bzr\\'"
+          "[/\\\\]_build\\'"
+          "[/\\\\]build\\'"
+          "[/\\\\]dist\\'"
+          "[/\\\\]vendor\\'"
+          "[/\\\\]\\.next\\'"
+          "[/\\\\]\\.cache\\'"
+          "[/\\\\]\\.elixir_ls\\'"))
 
-(after! lsp-ui
-  (setq lsp-ui-sideline-enable nil
-        lsp-ui-sideline-show-code-actions t
-        lsp-ui-sideline-show-diagnostics t
-        lsp-ui-sideline-show-hover nil
-        lsp-log-io nil
-        lsp-diagnostics-provider :auto
-        lsp-enable-symbol-highlighting t
-        lsp-headerline-breadcrumb-enable nil
-        lsp-headerline-breadcrumb-segments '(symbols)
-        lsp-ui-peek-enable t))
 
-;; (after! lsp-mode
-;;   (add-to-list 'lsp-language-id-configuration '(ruby-mode . "ruby"))
-;;   (lsp-register-client
-;;    (make-lsp-client :new-connection (lsp-stdio-connection '("ruby-lsp"))
-;;                     :major-modes '(ruby-mode)
-;;                     :server-id 'ruby-lsp)))
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("ruby-lsp"))
+                    :priority 2
+                    :major-modes '(ruby-mode)
+                    :server-id 'ruby-lsp))
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("solargraph" "stdio"))
+                    :priority 1
+                    :major-modes '(ruby-mode)
+                    :server-id 'solargraph)))
+;; (after! lsp-ui
+;;   (setq lsp-ui-doc-enable t))
+
+  ;; (setq lsp-tailwindcss-add-on-mode t
+  ;;       lsp-tailwindcss-validate t
+  ;;       lsp-tailwindcss-emmet-completions t))
+
+(add-hook 'js2-mode-hook #'lsp)
+;; (add-hook 'css-mode-hook #'lsp)
+;; (add-hook 'html-mode-hook #'lsp)
+
+;; (add-hook 'web-mode-hook #'lsp-completion-mode)
+;; (add-hook 'css-mode-hook #'lsp-completion-mode)
+;; (add-hook 'html-mode-hook #'lsp-completion-mode)
+
 #+end_src
+
+#+RESULTS:
+| lsp | js2-refactor-mode |
 
 ** org-mode
 #+begin_src emacs-lisp
-(after! ox-html (require 'ox-tailwind))
+;;(after! ox-html (require 'ox-tailwind))
 
 (defun my/enable-aggressive-indent ()
   (aggressive-indent-mode 1))
 
 (add-hook 'org-src-mode-hook #'my/enable-aggressive-indent)
 
-(use-package! org-appear
-  :after org
-  :hook (org-mode . org-appear-mode)
-  :config (setq
-           org-appear-autolinks t
-           org-appear-autoentities t
-           org-appear-autosubmarkers t ))
+;; (use-package! org-appear
+;;   :after org
+;;   :hook (org-mode . org-appear-mode)
+;;   :config (setq
+;;            org-appear-autolinks t
+;;            org-appear-autoentities t
+;;            org-appear-autosubmarkers t ))
 #+end_src
 
 ** ruby-mode
 #+begin_src emacs-lisp
 (add-hook! 'ruby-mode-hook #'rbenv-use-corresponding)
 (add-hook! 'ruby-mode-hook #'rainbow-delimiters-mode)
+;; (add-hook! 'ruby-mode-hook #'subword-mode)
+;; (add-hook 'ruby-mode-hook
+;;           (lambda ()
+;;             (modify-syntax-entry ?_ "w" ruby-mode-syntax-table)))
 
 (setq-hook! 'ruby-mode-hook +format-with-lsp nil)
 
@@ -660,7 +787,13 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
 ;; erb formatter
 (set-formatter! 'htmlbeautifier' ("htmlbeautifier" "--keep-blank-lines" "1") :modes '(web-mode))
 
+(set-lookup-handlers! 'ruby-mode
+  :definition #'lsp-find-definition
+  :references #'lsp-find-references
+  :documentation #'lsp-find-declaration)
 #+end_src
+
+#+RESULTS:
 
 ** rspec-mode
 #+begin_src emacs-lisp
@@ -705,16 +838,18 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
 
 (after! web-mode
   (setq web-mode-enable-engine-detection t)
-  
+
   (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
   (add-to-list 'auto-mode-alist '("\\.mjml\\'" . web-mode))
   (add-to-list 'web-mode-engines-alist '("erb" . "\\.erb\\'"))
   (add-to-list 'web-mode-engines-alist '("erb" . "\\.mjml\\'"))
 
+  (add-hook 'web-mode-hook #'hl-todo-mode)
+
   (map! :map web-mode-map
         :n "#" #'web-mode-navigate
         :n "C-#" #'my/web-mode-select-next-block
-        :n ";j" #'hydra-web-mode/body
+        :n ";j" #'hydra-web-block-interaction/body
         )
   )
 
@@ -740,7 +875,8 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
 #+begin_src emacs-lisp
 (map! :leader
       :desc "Copy file name" "fn" 'buffer/copy-file-name
-      :desc "Dried" "d" 'dired
+      :desc "Dired" "d" 'dired
+      :desc "Dired jumb" "fj" 'dired-jump
       :desc "Fullscreen" "Io" '+zen/toggle-fullscreen)
 #+end_src
 
@@ -750,7 +886,7 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
 
 ;; normal mode
 (map! :n "C-k" #'kill-whole-line)
-(map! :n "C-d" 'duplicate-line)
+(map! :n "C-j" 'duplicate-line)
 (map! :n "C-s" #'save-buffer)
 
 ;; insert mode
@@ -759,8 +895,9 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
 
 ;; visual mode
 (map! :v "C-c i" 'edit-indirect-region)
-(map! :nv "C-e" 'expreg-expand)
-(map! :nv "C-S-e" 'expreg-contract)
+(map! :nv "C-e" 'hydra-expand/body)
+;; (map! :nv "C-e" 'expreg-expand)
+;; (map! :nv "C-S-e" 'expreg-contract)
 ;; any mode
 
 #+end_src
@@ -769,20 +906,28 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
 #+begin_src emacs-lisp
 (map! :n ";a" 'treemacs-select-window)
 (map! :n ";w" '+hydra/window-nav/body)
-(map! :n ";b" 'hydra-centaur/body)
-(map! :n ";e" 'hydra-expand/body)
-(map! :n ";s" 'hydra-scroll/body)
-(map! :n ";l" 'hydra-move-line/body)
+;; (map! :n ";h" 'hydra-centaur/body)
+(map! :n ";e" 'hydra-regex-expand/body)
+(map! :n ";u" 'hydra-scroll/body)
+(map! :nv ";c" 'hydra-move-line/body)
 (map! :n ";i" 'hydra-string-inflection/body)
 (map! :n ";d" 'hydra-multiple-cursors/body)
-(map! :n ";f" 'avy-goto-line)
+;; (map! :n ";f" 'avy-goto-line-below)
+(map! :n ";b" 'hydra-centaur/body)
+(map! :n ";." 'projectile-find-dir-other-window)
+;; (map! :n ";s" 'save-buffer)
+;; (map! :nv ";t" 'hydra-textobj/body)
 #+end_src
 
 ** g leader mappings
 #+begin_src emacs-lisp
+;; (map! :n "gl" 'centaur-tabs-forward) ;; next tab
+(map! :n "gk" 'avy-goto-line-above) ;; next tab
+(map! :n "gj" 'avy-goto-line-below) ;; next tab
 (map! :n "gl" 'centaur-tabs-forward) ;; next tab
 (map! :n "gh" 'centaur-tabs-backward) ;; previous tab
 (map! :n "gw" 'ace-window) ;; select window
+(map! :n "gs" 'save-buffer)
 #+end_src
 
 ** z leader mappings
@@ -793,6 +938,7 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
 ** C-i leader mappings
 #+begin_src emacs-lisp
 (map! :i "C-i s" #'yasnippet-capf)
+(map! :i "C-i i" #'completion-at-point)
 (map! :i "C-i d" #'cape-dabbrev)
 (map! :i "C-i w" #'cape-dict)
 (map! :i "C-i y" #'cape-symbol)
@@ -953,12 +1099,21 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
      '(("app/forms/" "\\(.+\\)"))
      "app/forms/${filename}_form.rb"))
 
+  (defun projectile-rails-find-reflex ()
+    "Find a reflex object."
+    (interactive)
+    (projectile-rails-find-resource
+     "reflex:"
+     '(("app/reflexes/" "\\(.+\\)"))
+     "app/reflexes/${filename}_reflex.rb"))
+
   (map! :leader "rp" #'projectile-rails-find-view-component)
   (map! :leader "rs" #'projectile-rails-find-service)
   (map! :leader "ro" #'projectile-rails-find-preview)
   (map! :leader "rd" #'projectile-rails-find-spec)
   (map! :leader "rq" #'projectile-rails-find-stimulus)
   (map! :leader "rf" #'projectile-rails-find-form)
+  (map! :leader "rF" #'projectile-rails-find-reflex)
   )
 
 #+end_src

@@ -54,9 +54,8 @@
 (package! lsp-tailwindcss :recipe (:host github :repo "merrickluo/lsp-tailwindcss"))
 (package! string-inflection)
 (package! expand-region)
-;; (package! company-tabnine :recipe (:host github :repo "karta0807913/company-tabnine"))
 (package! evil-matchit)
-(package! lsp-origami)
+;;(package! lsp-origami)
 (package! prettier-js)
 (package! auto-dim-other-buffers)
 (package! visual-regexp)
@@ -67,33 +66,42 @@
 (package! ruby-refactor :pin "e6b7125878a08518bffec6942df0c606f748e9ee")
 ;; (package! apheleia)
 ;; (package! cape-yasnippet :recipe (:host github :repo "elken/cape-yasnippet"))
-(package! ox-tailwind :recipe (:host github :repo "vascoferreira25/ox-tailwind"))
+;;(package! ox-tailwind :recipe (:host github :repo "vascoferreira25/ox-tailwind"))
 (package! expreg)
 (package! move-text)
+(package! hydra)
 (package! pretty-hydra)
 
 ;; (unpin! multiple-cursors)
-(unpin! lsp-mode)
+;; (unpin! lsp-mode)
+;; (unpin! lsp-ui)
+;; (unpin! projectile-rails)
 ;; (unpin! nerd-icons)
 ;; (unpin! apheleia)
 ;; (unpin! treemacs)
 ;; (unpin! company-box)
 
-(package! transient
-  :pin "c2bdf7e12c530eb85476d3aef317eb2941ab9440"
-  :recipe (:host github :repo "magit/transient"))
+;; (package! transient
+;;   :pin "c2bdf7e12c530eb85476d3aef317eb2941ab9440"
+;;   :recipe (:host github :repo "magit/transient"))
+;;
+;; (package! with-editor
+;;   :pin "bbc60f68ac190f02da8a100b6fb67cf1c27c53ab"
+;;   :recipe (:host github :repo "magit/with-editor"))
 
-(package! with-editor
-  :pin "bbc60f68ac190f02da8a100b6fb67cf1c27c53ab"
-  :recipe (:host github :repo "magit/with-editor"))
-
-(package! codeium :recipe (:host github :repo "Exafunction/codeium.el"))
-(package! toc-mode)
+;; (package! codeium :recipe (:host github :repo "Exafunction/codeium.el"))
+;;(package! toc-mode)
 
 ;; (package! tabnine-capf :recipe (:host github :repo "50ways2sayhard/tabnine-capf"))
 ;; (package! svg-lib)
 (package! treemacs-nerd-icons)
 (package! nerd-icons-ibuffer)
 (package! nerd-icons-corfu)
-(package! popup)
-(package! exec-path-from-shell)
+(package! modus-themes)
+(package! adwaita-dark-theme)
+(package! nord-theme)
+(package! zeal-at-point)
+
+
+;;(package! popup)
+;; (package! exec-path-from-shell)
