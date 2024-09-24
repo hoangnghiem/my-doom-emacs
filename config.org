@@ -7,6 +7,7 @@
   - [[#personal-information][Personal information]]
   - [[#appearance][Appearance]]
   - [[#treemacs][Treemacs]]
+- [[#theme][Theme]]
 - [[#utility-functions][Utility functions]]
   - [[#duplicate-line][Duplicate line]]
   - [[#delete-blank-lines-of-current-buffer][Delete blank lines of current buffer]]
@@ -43,6 +44,7 @@
   - [[#z-leader-mappings][z leader mappings]]
   - [[#c-i-leader-mappings][C-i leader mappings]]
 - [[#ruby-on-rails][Ruby on rails]]
+- [[#ligatures][Ligatures]]
 
 * General
 ** Personal information
@@ -54,15 +56,19 @@
 ** Appearance
 *** Colorscheme & font
 #+begin_src emacs-lisp
-(setq doom-font (font-spec :family "Cascadia Code" :size 22 :weight 'regular)
-      doom-variable-pitch-font (font-spec :family "Cascadia Code" :size 22)
+(setq doom-font (font-spec :family "Fira Mono" :size 20 :weight 'medium)
+      doom-variable-pitch-font (font-spec :family "Fira Mono" :size 20)
       doom-theme 'doom-one
+      ;; doom-theme 'modus-vivendi-tinted
+      ;; doom-theme 'modus-operandi-tinted
       corfu-auto-prefix 1
       display-line-numbers-type t
       doom-themes-treemacs-theme "doom-colors")
 
 (setq-default pgtk-wait-for-event-timeout 0)
-(setq-default line-spacing 0.2)
+(setq-default line-spacing 0.25)
+(setq projectile-indexing-method 'alien)
+(setq projectile-generic-command "fd . --type f --type l --hidden --follow --exclude .git --exclude .project")
 
 ;; (setq debug-on-error t)
 #+end_src
@@ -94,7 +100,7 @@
       scroll-down-aggressively 0.01
       ispell-program-name "aspell"
       ispell-dictionary "english"
-      +popup-defaults (plist-put +popup-defaults :height 0.3)
+      ;; +popup-defaults (plist-put +popup-defaults :height 0.3)
       ;; company-frontend '(company-pseudo-tooltip-unless-just-one-frontend company-preview-if-just-one-frontend company-echo-metadata-frontend company-preview-frontend)
       +tree-sitter-hl-enabled-modes nil)
 
@@ -102,143 +108,111 @@
       (append yas-snippet-dirs
               (list (expand-file-name "snippets" doom-private-dir))))
 
-(add-hook! 'solaire-mode-hook
-  ;(set-face-attribute 'solaire-fringe-face nil :background (face-background 'solaire-hl-line-face))
-  (set-face-attribute 'fringe nil :background (face-background 'solaire-default-face)))
+;; (add-hook! 'solaire-mode-hook
+;;   ;(set-face-attribute 'solaire-fringe-face nil :background (face-background 'solaire-hl-line-face))
+;;   (set-face-attribute 'fringe nil :background (face-background 'solaire-default-face)))
 
 (add-hook 'ibuffer-mode-hook #'nerd-icons-ibuffer-mode)
 
-(set-popup-rules!
- '(("^ \\*" :slot -1) ; fallback rule for special buffers
-   ("^\\*" :select t :size 0.25)
-   ("^\\*Completions" :slot -1 :ttl 0)
-   ("^\\*\\(?:scratch\\|Messages\\)" :ttl t :size 0.25)
-   ("^\\*Help" :slot -1 :size 0.25 :select t)
-   ("^\\*doom:"
-    :size 0.35 :select t :modeline t :quit t :ttl t)))
-#+end_src
-
-*** Ligatures
-#+begin_src emacs-lisp
-;; Gathered from https://www.jetbrains.com/lp/mono/#ligatures
-;; The cheatsheat shows "\/" and "\" which I couldn't get working
-(let ((alist '(;;  -> -- --> ->> -< -<< --- -~ -|
-               (?- . ".\\(?:--\\|[->]>?\\|<<?\\|[~|]\\)")
-
-               ;; // /* /// /= /== />
-               ;; /** is not supported - see https://github.com/JetBrains/JetBrainsMono/issues/202
-               ;; /* cannot be conditioned on patterns followed by a whitespace,
-               ;; because that would require support for lookaheads in regex.
-               ;; We cannot just match on /*\s, because the whitespace would be considered
-               ;; as part of the match, but the font only specifies the ligature for /* with
-               ;; no trailing characters
-               ;;
-               (?/ . ".\\(?://?\\|==?\\|\\*\\*?\\|[>]\\)")
-
-               ;; */ *** *>
-               ;; Prevent grouping of **/ as *(*/) by actively looking for **/
-               ;; which consumes the triple but the font does not define a substitution,so it's rendered normally
-               (?* . ".\\(?:\\*/\\|\\*\\*\\|[>/]\\)")
-
-               ;; <!-- <<- <- <=> <= <| <|| <||| <|> <: <> <-< <<< <=< <<= <== <==>
-               ;; <~> << <-| <=| <~~ <~ <$> <$ <+> <+ <*> <* </ </> <->
-               (?< . ".\\(?:==>\\|!--\\|~~\\|-[|<]\\||>\\||\\{1,3\\}\\|<[=<-]?\\|=[><|=]?\\|[*+$~/-]>?\\|[:>]\\)")
-
-               ;; := ::= :?> :? :: ::: :< :>
-               (?: . ".\\(?:\\?>\\|:?=\\|::?\\|[>?<]\\)")
-
-               ;; == =:= === => =!= =/= ==> =>>
-               (?= . ".\\(?:[=>]?>\\|[:=!/]?=\\)")
-
-               ;;  != !== !!
-               (?! . ".\\(?:==?\\|!\\)")
-
-               ;; >= >> >] >: >- >>> >>= >>- >=>
-               (?> . ".\\(?:=>\\|>[=>-]\\|[]=:>-]\\)")
-
-               ;; && &&&
-               (?& . ".&&?")
-
-               ;; || |> ||> |||> |] |} |-> |=> |- ||- |= ||=
-               (?| . ".\\(?:||?>\\||[=-]\\|[=-]>\\|[]>}|=-]\\)")
-
-               ;; ... .. .? .= .- ..<
-               (?. . ".\\(?:\\.[.<]?\\|[.?=-]\\)")
-
-               ;; ++ +++ +>
-               (?+ . ".\\(?:\\+\\+?\\|>\\)")
-
-               ;; [| [< [||]
-               (?\[ . ".\\(?:|\\(?:|]\\)?\\|<\\)")
-
-               ;; {|
-               (?{ . ".|")
-
-               ;; ?: ?. ?? ?=
-               (?? . ".[:.?=]")
-
-               ;; ## ### #### #{ #[ #( #? #_ #_( #: #! #=
-               (?# . ".\\(?:#\\{1,3\\}\\|_(?\\|[{[(?:=!]\\)")
-
-               ;; ;;
-               (?\; . ".;")
-
-               ;; __ _|_
-               (?_ . ".|?_")
-
-               ;; ~~ ~~> ~> ~= ~- ~@
-               (?~ . ".\\(?:~>\\|[>@=~-]\\)")
-
-               ;; $>
-               (?$ . ".>")
-
-               ;; ^=
-               (?^ . ".=")
-
-               ;; ]#
-               (?\] . ".#")
-               )))
-  (dolist (char-regexp alist)
-
-    (set-char-table-range composition-function-table (car char-regexp)
-                          `([,(cdr char-regexp) 0 font-shape-gstring]))))
-#+end_src
-
-*** Custom faces
-#+begin_src emacs-lisp
-;; my custom color for web mode, works well with doom-one theme
-;; disable if using other theme
-(custom-set-faces!
-  '(web-mode-block-delimiter-face :mode 'web-mode :foreground "#64748b")
-  '(web-mode-block-string-face :mode 'web-mode :foreground "#a6da95")
-  '(web-mode-html-tag-bracket-face :mode 'web-mode :foreground "#64748b")
-  '(web-mode-html-attr-equal-face :mode 'web-mode :foreground "#64748b")
-  '(web-mode-symbol-face :mode 'web-mode :foreground "#f5a97f" :slant italic)
-  '(web-mode-html-tag-face :mode 'web-mode :foreground "#ff6c6b")
-  '(web-mode-html-attr-name-face :mode 'web-mode :foreground "#bbc2cf")
-  '(web-mode-html-attr-value-face :mode 'web-mode :foreground "#8aadf4")
-  '(web-mode-keyword-face :mode 'web-mode :slant italic)
-  '(hl-line :background "#1c1f24")
-  '(font-lock-comment-face :foreground "#85714c" :slant italic)
-  '(font-lock-string-face :foreground "#a6da95")
-  '(font-lock-keyword-face :slant italic))
+;; (set-popup-rules!
+;;  '(("^ \\*" :slot -1) ; fallback rule for special buffers
+;;    ("^\\*" :select t :size 0.25)
+;;    ("^\\*Completions" :slot -1 :ttl 0)
+;;    ("^\\*\\(?:scratch\\|Messages\\)" :ttl t :size 0.25)
+;;    ("^\\*Help" :slot -1 :size 0.25 :select t)
+;;    ("^\\*doom:"
+;;     :size 0.35 :select t :modeline t :quit t :ttl t)))
 #+end_src
 
 ** Treemacs
 Allow C-h and C-l to switch buffers
 #+begin_src emacs-lisp
-
 (map!
  (:after treemacs-evil
-   (:map evil-treemacs-state-map
-     "C-h" #'evil-window-left
-     "C-l" #'evil-window-right
-     "gb" #'treemacs-bookmark)))
+         (:map evil-treemacs-state-map
+               "C-h" #'evil-window-left
+               "C-l" #'evil-window-right
+               "gb" #'treemacs-bookmark)))
 
 (after! treemacs
   (add-hook! 'treemacs-mode-hook (setq window-divider-mode -1
                                        variable-pitch-mode 1
                                        treemacs-follow-mode 1)))
+#+end_src
+
+* Theme
+#+begin_src emacs-lisp
+(blink-cursor-mode 1)  ; Enable cursor blinking
+(setq blink-cursor-interval 1.0)  ; Time in seconds between cursor blinks
+(setq blink-cursor-delay 0.5)
+
+(use-package! modus-themes
+  :config
+  (setq modus-themes-common-palette-overrides modus-themes-preset-overrides-faint)
+  (setq modus-themes-italic-constructs t
+        modus-themes-bold-constructs t
+        modus-themes-mixed-fonts t
+        modus-themes-custom-auto-reload t)
+
+  (setq modus-vivendi-tinted-palette-overrides
+        '((bg-main "#292D3E")
+          ;; (fg-main "#eceff4")
+          (fg-main "#DFE5F0")
+          ;; nord palette
+          ;; (red-faint "#bf616a")
+          ;; (blue-faint "#81a1c1")
+          ;; (green-faint "#a3be8c")
+          ;; (yellow-faint "#ebcb8b")
+          ;; (magenta-faint "#b48ead")
+          ;; (cyan-faint "#88c0d0")
+          ;; (blue "#81a1c1")
+          ;; (red "#bf616a")
+          ;; (green "#a3be8c")
+          ;; (green-faint "#c3e88d")
+          ;; (cyan "#88c0d0")
+          ;; (yellow "#ebcb8b")
+          ;; (yellow-faint "#ebcb8b")
+          ;; (pink "#b48ead")
+          ;; (comment "#68748D")
+          ;; (blue-cooler "#81a1c1")
+          )))
+
+;; light theme
+;; (custom-set-faces!
+;;   '(web-mode-html-attr-name-face :slant italic)
+;;   '(web-mode-block-string-face :foreground "#316500")
+;;   '(web-mode-html-attr-equal-face :foreground "#76839D")
+;;   '(web-mode-keyword-face :foreground "#d08770")
+;;   '(web-mode-html-attr-value-face :foreground "#6f5500")
+;;   '(font-lock-keyword-face :slant italic)
+;;   '(font-lock-string-face :foreground "#316500")
+;;   )
+
+;; dark theme
+;; (custom-set-faces!
+;;   '(web-mode-html-attr-name-face :slant italic)
+;;   '(web-mode-block-string-face :foreground "#a3be8c")
+;;   '(web-mode-html-attr-equal-face :foreground "#76839D")
+;;   '(web-mode-keyword-face :foreground "#d08770")
+;;   '(web-mode-html-attr-value-face :foreground "#ebcb8b")
+;;   '(font-lock-keyword-face :slant italic)
+;;   '(font-lock-string-face :foreground "#a3be8c ")
+;;   '(font-lock-type-face :foreground "#ebcb8b")
+;;   )
+
+;; doom one
+(custom-set-faces!
+  ;; '(web-mode-html-attr-name-face :slant italic)
+  ;; '(web-mode-block-string-face :foreground "#a3be8c")
+  ;; '(web-mode-html-attr-equal-face :foreground "#76839D")
+  ;; '(web-mode-keyword-face :foreground "#d08770")
+  ;; '(web-mode-html-attr-value-face :foreground "#ebcb8b")
+  '(font-lock-keyword-face :slant italic :family "Cascadia Code")
+  '(font-lock-comment-face :slant italic :family "Cascadia Code")
+  ;; '(font-lock-string-face :foreground "#a3be8c ")
+  ;; '(font-lock-type-face :foreground "#ebcb8b")
+  )
+
 #+end_src
 
 * Utility functions
@@ -390,16 +364,22 @@ Allow C-h and C-l to switch buffers
 
 *** cape
 #+begin_src emacs-lisp
+(use-package! company-web)
+
+(after! cape
+  (setq-local completion-at-point-functions
+              (mapcar #'cape-company-to-capf
+                      (list #'company-robe #'company-web-html))))
 ;; (after! cape
 ;;   (setq cape-dict-file "/usr/share/dict/words"))
 #+end_src
 
 *** highlight-indent-guides
 #+begin_src emacs-lisp
-(use-package! highlight-indent-guides
-  :config
-  (setq highlight-indent-guides-method 'column)
-  (setq highlight-indent-guides-responsive 'top))
+;; (use-package! highlight-indent-guides
+;;   :config
+;;   (setq highlight-indent-guides-method 'character)
+;;   (setq highlight-indent-guides-responsive 'top))
   ;; (setq highlight-indent-guides-auto-character-face-perc 20)
   ;; (setq highlight-indent-guides-auto-even-face-perc 8)
   ;; (setq highlight-indent-guides-auto-character-face-perc 100))
@@ -501,9 +481,9 @@ Allow C-h and C-l to switch buffers
 
 *** auto-dim-other-buffers
 #+begin_src emacs-lisp
-(add-hook 'after-init-hook (lambda ()
-                             (when (fboundp 'auto-dim-other-buffers-mode)
-                               (auto-dim-other-buffers-mode t))))
+;; (add-hook 'after-init-hook (lambda ()
+;;                              (when (fboundp 'auto-dim-other-buffers-mode)
+;;                                (auto-dim-other-buffers-mode t))))
 #+end_src
 *** expreg (language specific expand region)
 #+begin_src emacs-lisp
@@ -517,19 +497,14 @@ Allow C-h and C-l to switch buffers
         wakatime-cli-path "~/.wakatime/wakatime-cli")
   (global-wakatime-mode))
 #+end_src
-*** lsp-tailwindcss
-#+begin_src emacs-lisp
-(use-package! lsp-tailwindcss)
-
-(add-hook! 'before-save-hook 'lsp-tailwindcss-rustywind-before-save)
 #+end_src
 *** zeal-at-point
 #+begin_src emacs-lisp
-(use-package zeal-at-point
-  :ensure t
-  :bind (("C-c d" . zeal-at-point))
-  :config
-  (add-to-list 'zeal-at-point-mode-alist '(ruby-mode . ("ruby" "rails"))))
+;; (use-package zeal-at-point
+;;   :ensure t
+;;   :bind (("C-c d" . zeal-at-point))
+;;   :config
+;;   (add-to-list 'zeal-at-point-mode-alist '(ruby-mode . ("ruby" "rails"))))
 #+end_src
 * Hydras
 ** string-inflection
@@ -705,49 +680,85 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
         lsp-solargraph-multi-root nil
         lsp-enable-symbol-highlighting nil
         lsp-ui-doc-enable nil
+        ;; lsp-log-io t
+        lsp-completion-enable t
+        ;; lsp-completion-provider :capf
+        ;; lsp-enable-file-watchers nil
         lsp-file-watch-ignored-directories
         '("[/\\\\]\\.git\\'"
           "[/\\\\]node_modules\\'"
           "[/\\\\]\\.hg\\'"
+          "[/\\\\]\\.ruby-lsp\\'"
           "[/\\\\]\\.bzr\\'"
           "[/\\\\]_build\\'"
           "[/\\\\]build\\'"
+          "[/\\\\]storage\\'"
+          "[/\\\\]deployment\\'"
+          "[/\\\\]log\\'"
+          "[/\\\\]tmp\\'"
+          "[/\\\\]db\\'"
           "[/\\\\]dist\\'"
           "[/\\\\]vendor\\'"
           "[/\\\\]\\.next\\'"
           "[/\\\\]\\.cache\\'"
           "[/\\\\]\\.elixir_ls\\'"))
 
+  ;; (add-to-list 'lsp-language-id-configuration '(web-mode . "tailwindcss"))
+  (add-to-list 'lsp-language-id-configuration '(web-mode . "stimulus"))
+  ;; (add-to-list 'lsp-language-id-configuration '(css-mode . "tailwindcss"))
+  ;; (add-to-list 'lsp-language-id-configuration '(js2-mode . "tailwindcss"))
 
   (lsp-register-client
    (make-lsp-client :new-connection (lsp-stdio-connection '("ruby-lsp"))
                     :priority 2
                     :major-modes '(ruby-mode)
                     :server-id 'ruby-lsp))
+
   (lsp-register-client
    (make-lsp-client :new-connection (lsp-stdio-connection '("solargraph" "stdio"))
                     :priority 1
                     :major-modes '(ruby-mode)
                     :server-id 'solargraph)))
+
+(use-package! lsp-tailwindcss)
+
+;; (use-package! lsp-tailwindcss
+;;   :init (setq lsp-tailwindcss-add-on-mode t)
+;;   :after (lsp-mode))
+
+;; (use-package! lsp-tailwindcss
+;;       :init
+;;       (setq lsp-tailwindcss-add-on-mode t
+;;             lsp-tailwindcss-server-command "tailwindcss-language-server"
+;;             lsp-tailwindcss-emmet-completions nil)
+;;       :config
+;;       (dolist (tw-major-mode
+;;                '(css-mode
+;;                  css-ts-mode
+;;                  typescript-mode
+;;                  typescript-ts-mode
+;;                  tsx-ts-mode
+;;                  web-mode
+;;                  ruby-mode
+;;                  js2-mode
+;;                  js-ts-mode
+;;                  clojure-mode))
+;;         (add-to-list 'lsp-tailwindcss-major-modes tw-major-mode)))
+
+(add-hook! 'before-save-hook 'lsp-tailwindcss-rustywind-before-save)
 ;; (after! lsp-ui
 ;;   (setq lsp-ui-doc-enable t))
 
-  ;; (setq lsp-tailwindcss-add-on-mode t
-  ;;       lsp-tailwindcss-validate t
-  ;;       lsp-tailwindcss-emmet-completions t))
 
-(add-hook 'js2-mode-hook #'lsp)
+;; (add-hook 'js2-mode-hook #'lsp)
 ;; (add-hook 'css-mode-hook #'lsp)
-;; (add-hook 'html-mode-hook #'lsp)
+;; (add-hook 'web-mode-hook #'lsp)
 
 ;; (add-hook 'web-mode-hook #'lsp-completion-mode)
 ;; (add-hook 'css-mode-hook #'lsp-completion-mode)
 ;; (add-hook 'html-mode-hook #'lsp-completion-mode)
 
 #+end_src
-
-#+RESULTS:
-| lsp | js2-refactor-mode |
 
 ** org-mode
 #+begin_src emacs-lisp
@@ -849,8 +860,7 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
   (map! :map web-mode-map
         :n "#" #'web-mode-navigate
         :n "C-#" #'my/web-mode-select-next-block
-        :n ";j" #'hydra-web-block-interaction/body
-        )
+        :n ";j" #'hydra-web-block-interaction/body)
   )
 
 (setq web-mode-enable-current-element-highlight t
@@ -888,6 +898,9 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
 (map! :n "C-k" #'kill-whole-line)
 (map! :n "C-j" 'duplicate-line)
 (map! :n "C-s" #'save-buffer)
+
+(map! :n "M-j" #'move-text-down)
+(map! :n "M-k" #'move-text-up)
 
 ;; insert mode
 (map! :i "s-/" 'hippie-expand)
@@ -1080,8 +1093,8 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
     (interactive)
     (projectile-rails-find-resource
      "stimulus: "
-     '(("app/vite/javascripts/controllers/" "\\(.+\\)_controller\\.js$"))
-     "app/vite/javascripts/controllers/${filename}_controller.js"))
+     '(("app/vite/controllers/" "\\(.+\\)_controller\\.js$"))
+     "app/vite/controllers/${filename}_controller.js"))
 
   (defun projectile-rails-find-preview ()
     "Find a policy object."
@@ -1099,21 +1112,98 @@ _h_   _l_     _y_ank        _t_ype       _e_xchange-point          /,`.-'`'   ..
      '(("app/forms/" "\\(.+\\)"))
      "app/forms/${filename}_form.rb"))
 
-  (defun projectile-rails-find-reflex ()
-    "Find a reflex object."
-    (interactive)
-    (projectile-rails-find-resource
-     "reflex:"
-     '(("app/reflexes/" "\\(.+\\)"))
-     "app/reflexes/${filename}_reflex.rb"))
-
   (map! :leader "rp" #'projectile-rails-find-view-component)
   (map! :leader "rs" #'projectile-rails-find-service)
   (map! :leader "ro" #'projectile-rails-find-preview)
   (map! :leader "rd" #'projectile-rails-find-spec)
   (map! :leader "rq" #'projectile-rails-find-stimulus)
   (map! :leader "rf" #'projectile-rails-find-form)
-  (map! :leader "rF" #'projectile-rails-find-reflex)
   )
 
+#+end_src
+
+* Ligatures
+#+begin_src emacs-lisp
+;; Gathered from https://www.jetbrains.com/lp/mono/#ligatures
+;; The cheatsheat shows "\/" and "\" which I couldn't get working
+(let ((alist '(;;  -> -- --> ->> -< -<< --- -~ -|
+               (?- . ".\\(?:--\\|[->]>?\\|<<?\\|[~|]\\)")
+
+               ;; // /* /// /= /== />
+               ;; /** is not supported - see https://github.com/JetBrains/JetBrainsMono/issues/202
+               ;; /* cannot be conditioned on patterns followed by a whitespace,
+               ;; because that would require support for lookaheads in regex.
+               ;; We cannot just match on /*\s, because the whitespace would be considered
+               ;; as part of the match, but the font only specifies the ligature for /* with
+               ;; no trailing characters
+               ;;
+               (?/ . ".\\(?://?\\|==?\\|\\*\\*?\\|[>]\\)")
+
+               ;; */ *** *>
+               ;; Prevent grouping of **/ as *(*/) by actively looking for **/
+               ;; which consumes the triple but the font does not define a substitution,so it's rendered normally
+               (?* . ".\\(?:\\*/\\|\\*\\*\\|[>/]\\)")
+
+               ;; <!-- <<- <- <=> <= <| <|| <||| <|> <: <> <-< <<< <=< <<= <== <==>
+               ;; <~> << <-| <=| <~~ <~ <$> <$ <+> <+ <*> <* </ </> <->
+               (?< . ".\\(?:==>\\|!--\\|~~\\|-[|<]\\||>\\||\\{1,3\\}\\|<[=<-]?\\|=[><|=]?\\|[*+$~/-]>?\\|[:>]\\)")
+
+               ;; := ::= :?> :? :: ::: :< :>
+               (?: . ".\\(?:\\?>\\|:?=\\|::?\\|[>?<]\\)")
+
+               ;; == =:= === => =!= =/= ==> =>>
+               (?= . ".\\(?:[=>]?>\\|[:=!/]?=\\)")
+
+               ;;  != !== !!
+               (?! . ".\\(?:==?\\|!\\)")
+
+               ;; >= >> >] >: >- >>> >>= >>- >=>
+               (?> . ".\\(?:=>\\|>[=>-]\\|[]=:>-]\\)")
+
+               ;; && &&&
+               (?& . ".&&?")
+
+               ;; || |> ||> |||> |] |} |-> |=> |- ||- |= ||=
+               (?| . ".\\(?:||?>\\||[=-]\\|[=-]>\\|[]>}|=-]\\)")
+
+               ;; ... .. .? .= .- ..<
+               (?. . ".\\(?:\\.[.<]?\\|[.?=-]\\)")
+
+               ;; ++ +++ +>
+               (?+ . ".\\(?:\\+\\+?\\|>\\)")
+
+               ;; [| [< [||]
+               (?\[ . ".\\(?:|\\(?:|]\\)?\\|<\\)")
+
+               ;; {|
+               (?{ . ".|")
+
+               ;; ?: ?. ?? ?=
+               (?? . ".[:.?=]")
+
+               ;; ## ### #### #{ #[ #( #? #_ #_( #: #! #=
+               (?# . ".\\(?:#\\{1,3\\}\\|_(?\\|[{[(?:=!]\\)")
+
+               ;; ;;
+               (?\; . ".;")
+
+               ;; __ _|_
+               (?_ . ".|?_")
+
+               ;; ~~ ~~> ~> ~= ~- ~@
+               (?~ . ".\\(?:~>\\|[>@=~-]\\)")
+
+               ;; $>
+               (?$ . ".>")
+
+               ;; ^=
+               (?^ . ".=")
+
+               ;; ]#
+               (?\] . ".#")
+               )))
+  (dolist (char-regexp alist)
+
+    (set-char-table-range composition-function-table (car char-regexp)
+                          `([,(cdr char-regexp) 0 font-shape-gstring]))))
 #+end_src

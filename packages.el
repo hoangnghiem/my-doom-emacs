@@ -73,7 +73,7 @@
 (package! pretty-hydra)
 
 ;; (unpin! multiple-cursors)
-;; (unpin! lsp-mode)
+(unpin! lsp-mode)
 ;; (unpin! lsp-ui)
 ;; (unpin! projectile-rails)
 ;; (unpin! nerd-icons)
@@ -89,7 +89,10 @@
 ;;   :pin "bbc60f68ac190f02da8a100b6fb67cf1c27c53ab"
 ;;   :recipe (:host github :repo "magit/with-editor"))
 
-;; (package! codeium :recipe (:host github :repo "Exafunction/codeium.el"))
+(package! codeium :recipe (:host github :repo "Exafunction/codeium.el"))
+(package! company-tailwindcss :recipe (:host github :repo "tyler-dodge/company-tailwindcss"))
+(package! company-web :recipe (:host github :repo "osv/company-web"))
+
 ;;(package! toc-mode)
 
 ;; (package! tabnine-capf :recipe (:host github :repo "50ways2sayhard/tabnine-capf"))
@@ -101,6 +104,9 @@
 (package! adwaita-dark-theme)
 (package! nord-theme)
 (package! zeal-at-point)
+(package! humanoid-themes)
+(package! dracula-theme)
+
 
 
 ;;(package! popup)

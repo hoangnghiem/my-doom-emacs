@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: tui-content-tag
+# key: t
+# --
+<%= tui_content_tag extra_options: do -%>
+  $0
+<% end -%>
